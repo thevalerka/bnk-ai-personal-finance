@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://amt:amt@localhost:5433/amt"
     redis_url: str = "redis://localhost:6380/0"
 
+    finnhub_api_key: str = ""
+    fred_api_key: str = ""
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

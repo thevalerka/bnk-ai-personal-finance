@@ -1,6 +1,7 @@
 # config
 
-Runtime configuration: `taxonomy.yaml` (attention-engine DAG, phase 3),
-`providers.yaml` (market data provider routing, phase 1), `budgets.yaml`
-(per-provider free-tier token budgets, phase 1), `personas/` (seeded interest
-vectors for the "View as" switcher, phase 3).
+Runtime configuration: `providers.yaml` (capability -> provider fallback
+chains) and `budgets.yaml` (per-provider free-tier call budgets), both loaded
+by `app/market/config_loader.py`. `taxonomy.yaml` (attention-engine DAG) and
+`personas/` (seeded interest vectors for the "View as" switcher) land in
+phase 3.

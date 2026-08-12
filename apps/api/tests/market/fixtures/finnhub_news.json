@@ -1,0 +1,13 @@
+[
+  {
+    "category": "company",
+    "datetime": 1706208000,
+    "headline": "Apple beats quarterly estimates",
+    "id": 123,
+    "image": "",
+    "related": "AAPL",
+    "source": "Reuters",
+    "summary": "Apple reported quarterly results ahead of estimates.",
+    "url": "https://example.com/apple-earnings"
+  }
+]

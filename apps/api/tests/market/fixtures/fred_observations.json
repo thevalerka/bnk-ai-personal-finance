@@ -1,0 +1,7 @@
+{
+  "observations": [
+    {"realtime_start": "2024-01-25", "realtime_end": "2024-01-25", "date": "2024-01-25", "value": "4.18"},
+    {"realtime_start": "2024-01-25", "realtime_end": "2024-01-25", "date": "2024-01-24", "value": "4.15"},
+    {"realtime_start": "2024-01-25", "realtime_end": "2024-01-25", "date": "2024-01-23", "value": "."}
+  ]
+}
