@@ -1,0 +1,24 @@
+# Per-provider free-tier call budgets, enforced by BudgetManager as a
+# fixed-window counter in Redis. These are conservative approximations of
+# each vendor's published free-tier limits (docs/PLAN.md section 3.2) —
+# verify against the vendor's current docs before raising them.
+
+finnhub:
+  capacity: 60
+  window_seconds: 60
+
+alpaca:
+  capacity: 200
+  window_seconds: 60
+
+binance:
+  capacity: 1200
+  window_seconds: 60
+
+hyperliquid:
+  capacity: 100
+  window_seconds: 60
+
+fred:
+  capacity: 120
+  window_seconds: 60

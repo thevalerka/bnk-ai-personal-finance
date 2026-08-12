@@ -1,3 +1,6 @@
 fastapi>=0.141
 uvicorn[standard]>=0.52
 pydantic-settings>=2.15
+httpx>=0.28
+redis>=8.1
+pyyaml>=6.0

@@ -1,0 +1,14 @@
+# Capability -> ordered provider fallback chain. The Router tries providers
+# left to right, skipping ones that are out of budget or that error out.
+# See docs/PLAN.md section 3.2 for why each provider is paired the way it is.
+
+equity_quote:
+  - finnhub
+  - alpaca
+
+crypto_quote:
+  - binance
+  - hyperliquid
+
+macro_series:
+  - fred

@@ -3,4 +3,6 @@ ruff>=0.16
 mypy>=2.3
 pytest>=9.1
 pytest-asyncio>=1.4
-httpx>=0.28
+respx>=0.23
+fakeredis>=2.37
+types-PyYAML>=6.0
