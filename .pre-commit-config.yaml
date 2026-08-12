@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        files: ^apps/(api|worker)/
+      - id: ruff-format
+        files: ^apps/(api|worker)/
+
+  - repo: local
+    hooks:
+      - id: mypy-api
+        name: mypy (apps/api)
+        entry: bash -c 'cd apps/api && .venv/bin/mypy app'
+        language: system
+        files: ^apps/api/app/
+        pass_filenames: false
+
+      - id: mypy-worker
+        name: mypy (apps/worker)
+        entry: bash -c 'cd apps/worker && .venv/bin/mypy app'
+        language: system
+        files: ^apps/worker/app/
+        pass_filenames: false
+
+      - id: eslint-web
+        name: eslint (apps/web)
+        entry: >-
+          bash -c 'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use default >/dev/null;
+          cd apps/web && npm run -s lint'
+        language: system
+        files: ^apps/web/
+        pass_filenames: false
