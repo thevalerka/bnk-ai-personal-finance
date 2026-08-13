@@ -1,0 +1,58 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.tile {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.symbol {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.price {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deltaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.delta {
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.deltaUp {
+  color: var(--positive);
+}
+
+.deltaDown {
+  color: var(--negative);
+}
+
+.deltaFlat {
+  color: var(--text-muted);
+}
+
+.tileUnavailable {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  color: var(--text-muted);
+  font-size: 12px;
+}

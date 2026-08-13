@@ -1,13 +1,48 @@
+/* Dark-first terminal design system. Palette validated for CVD-safe
+   categorical/status separation on the dark chart surface (docs/DECISIONS.md
+   ADR — dataviz skill reference palette). No light theme yet: this is a
+   trading terminal, not a marketing page, and P2 doesn't ask for a toggle. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --surface-0: #0d0d0d; /* page plane */
+  --surface-1: #1a1a19; /* panel / card */
+  --surface-2: #232322; /* elevated / hover */
+
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+
+  --accent: #3987e5;
+  --accent-wash: rgba(57, 135, 229, 0.1);
+
+  --positive: #0ca30c;
+  --negative: #e66767;
+  --neutral: #898781;
+
+  --warning: #fab219;
+
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -17,17 +52,13 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--surface-0);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 a {
@@ -35,8 +66,11 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+table {
+  border-collapse: collapse;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
