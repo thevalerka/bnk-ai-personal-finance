@@ -5,7 +5,7 @@
 }
 
 .tile {
-  background: var(--surface-2);
+  background: var(--tile-gradient);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   padding: var(--space-3);

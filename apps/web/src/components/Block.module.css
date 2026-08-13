@@ -1,5 +1,5 @@
 .block {
-  background: var(--surface-1);
+  background: var(--panel-gradient);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: flex;

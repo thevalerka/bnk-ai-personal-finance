@@ -1,5 +1,5 @@
 .tape {
-  background: var(--surface-1);
+  background: var(--header-gradient);
   border-bottom: 1px solid var(--border);
 }
 

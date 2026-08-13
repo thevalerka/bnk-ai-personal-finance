@@ -34,8 +34,8 @@
 
   --warning: #fab219;
 
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-sans: var(--font-display), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-data), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -44,13 +44,24 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-pill: 999px;
+  /* Squared, not rounded — a terminal has edges. Kept at 2px rather than a
+     literal 0 so hairline borders don't alias into a jagged corner pixel;
+     reads as square at normal viewing distance. */
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-pill: 2px;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 0 1px var(--accent-wash-strong);
+
+  /* Decorative surface gradients — chrome only (panels, header, inputs).
+     Data marks (sparklines, heatmap cells, yield-curve line) stay flat/
+     validated-palette; a gradient there would distort the value encoding. */
+  --panel-gradient: linear-gradient(165deg, var(--surface-2) 0%, var(--surface-1) 55%, var(--surface-1) 100%);
+  --tile-gradient: linear-gradient(165deg, #29292b 0%, var(--surface-2) 65%);
+  --header-gradient: linear-gradient(180deg, rgba(20, 20, 22, 0.9), rgba(11, 11, 12, 0.86));
+  --brand-gradient: linear-gradient(120deg, var(--accent) 0%, var(--series-2) 100%);
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 120ms var(--ease);
@@ -71,11 +82,12 @@ body {
 
 body {
   color: var(--text-primary);
-  /* Faint radial vignette off the flat page plane — depth without a texture,
-     imperceptible until you're looking for it. */
+  /* Radial accent bloom off the top plus a faint diagonal sweep between two
+     near-black stops — depth and direction without ever lifting off dark
+     enough to threaten text contrast. */
   background:
-    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(57, 135, 229, 0.05), transparent 60%),
-    var(--surface-0);
+    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(57, 135, 229, 0.07), transparent 60%),
+    linear-gradient(165deg, #101012 0%, #0d0d0d 45%, #0a0a0b 100%);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

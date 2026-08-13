@@ -5,6 +5,101 @@ Newest entry first.
 
 ---
 
+## 2026-08-13 — Font/gradient/squared-corner pass, deployed
+
+**Done:**
+
+- User feedback on the live redesign: fonts were rendering as Times New
+  Roman (font failed to apply on their end), wanted a more modern
+  typeface, gradiented backgrounds, and squared (not rounded) borders.
+- Swapped `Geist`/`Geist_Mono` for `Space_Grotesk` (`--font-display`) and
+  `JetBrains_Mono` (`--font-data`) in `app/layout.tsx` — same
+  `next/font/google` self-hosting pattern as before, just a more
+  distinctive geometric sans + a mono with more character for figures.
+- `--radius-sm`/`--radius`/`--radius-pill` all dropped to 2px (effectively
+  square; not a literal 0 so hairline borders don't alias into a jagged
+  corner). Applies everywhere automatically since every component already
+  consumed the radius tokens rather than hardcoding values — only the two
+  literal `border-radius: 50%` circles (header status dot, calendar
+  kind-dot) were left round, deliberately: they're semantic indicator
+  dots, not panel chrome.
+- Added decorative gradient tokens — `--panel-gradient`, `--tile-gradient`,
+  `--header-gradient`, `--brand-gradient` — and wired them into `Block`
+  (every card), `Shell` (header bar, prompt input, "Terminal" wordmark now
+  gradient-text), `QuoteGrid` tiles, and `Tape`. Body background gained a
+  diagonal linear-gradient sweep under the existing radial accent bloom.
+  Scoped to chrome only, per the dataviz skill: sparkline fills, the
+  heatmap legend bar, and the yield-curve line keep their existing flat/
+  validated-palette treatment untouched — a decorative gradient on a data
+  mark would distort the value encoding.
+- No new hex values — gradients compose from the same validated palette
+  slots (accent, series-2, surface-1/2), so no re-validation needed.
+
+**Verified locally:** `make test`/`lint`/`typecheck`/`build` all green (20
+web tests, same 115KB first load). Rebuilt and restarted `amt-web`;
+confirmed live via a scratch Playwright screenshot at desktop (1440px)
+and mobile (390px) widths — new font renders, gradients visible on
+panels/header/tiles, corners square throughout, no label collisions, and
+the yield-curve mobile tenor-thinning still holds.
+
+**Next:** Phase 3 — Attention engine (`docs/PLAN.md` section 7, P3). Do
+not start until the user has reviewed the live redesign.
+
+---
+
+## 2026-08-13 — Dataviz-skill redesign pass, deployed
+
+**Done:**
+
+- Applied the dataviz skill's procedure across every P2 block (commit
+  `ebe26dd`, merged `413b28f`): new design tokens (elevation shadows,
+  pill/sm radii, transitions), sticky glass header with a live-status
+  pulse, a true auto-scrolling marquee `Tape` (duplicated track, seamless
+  CSS loop, pauses on hover, respects `prefers-reduced-motion`), card
+  hover elevation, and a shared `Unavailable` component (icon + message)
+  now wired into every block instead of five ad-hoc inline-styled `<p>`
+  fallbacks.
+- `YieldCurve` got the hover layer P2 deferred (ADR-0009): split into a
+  server component (fetch only) + new client component
+  `YieldCurveChart` with a crosshair, snap-to-nearest tooltip, soft
+  accent-wash area fill, and a narrow-viewport rule thinning 11 tenor
+  labels to 6 so they don't collide on phone width. `QuoteGrid` tiles are
+  bigger with a proportional-figure price, a pill delta badge, and a
+  trend-colored `Sparkline` with matching area wash. `Heatmap` gained a
+  diverging-scale legend + hover/focus lift. `EconomicCalendar` got
+  fixed-order categorical dots. `NewsList` got a hover-revealed
+  external-link icon.
+- All hex values reused existing validated palette slots — no new colors,
+  no re-validation needed.
+- **Deployed to production**: the redesign was merged after `amt-web`'s
+  last build/restart, so the live site was still serving the pre-redesign
+  build. Rebuilt (`npm run build`, 115KB first load, same static-prerender
+  profile as before) and restarted the `amt-web` systemd unit. Confirmed
+  the new CSS (marquee keyframes, `prefers-reduced-motion` rule) is
+  present in the served static chunks and `https://vespersoul.com`
+  returns 200 post-restart.
+
+**Verified locally:** `make test` / `make lint` / `make typecheck` all
+green (48 api + 1 worker + 20 web tests — `Tape.test.tsx` updated since
+the marquee legitimately renders each quote twice, once `aria-hidden`).
+Screenshotted the rebuild via a scratch Playwright script at desktop/
+tablet/mobile widths plus a forced yield-curve hover state; fixed a
+mobile tenor-label collision that surfaced before considering it done.
+
+**Not done / deliberately deferred:**
+
+- No Lighthouse run against the now-live redesign yet — worth doing now
+  that there's a real URL, to confirm the ≥90 target still holds with the
+  new elevation/animation CSS.
+- Provider keys (Finnhub/FRED/Alpaca) still not deployed — SPY/QQQ/yield-
+  curve/heatmap/news/calendar still correctly show "unavailable" on the
+  live redesign, same gap as before this pass.
+
+**Next:** Phase 3 — Attention engine (`docs/PLAN.md` section 7, P3). Do
+not start until the user has reviewed the live redesign.
+
+---
+
 ## 2026-08-13 — Deploy to vespersoul.com + `.env` → `.ratx` rename
 
 **Done:**
