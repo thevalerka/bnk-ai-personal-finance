@@ -1,0 +1,28 @@
+.gridline {
+  stroke: var(--gridline);
+  stroke-width: 1;
+}
+
+.line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dot {
+  fill: var(--accent);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.endLabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.axisLabel {
+  fill: var(--text-muted);
+  font-size: 10px;
+}

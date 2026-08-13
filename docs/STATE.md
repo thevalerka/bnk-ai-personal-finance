@@ -5,6 +5,98 @@ Newest entry first.
 
 ---
 
+## 2026-08-12 — P2: Static dashboard
+
+**Done:**
+
+Backend (`apps/api/app/market/`, needed by the frontend blocks below —
+extends P1 rather than a new phase's worth of provider work):
+
+- `Router` generalized: `quote()`'s cache→budget→fallback policy is now a
+  shared private `_call()`, with `candles()`, `news()`, `calendar()` added
+  on top of it (ADR-0008). Each has its own cache-freshness TTL (quotes/
+  candles 30s, news 300s, calendar 3600s, per docs/PLAN.md §3.1).
+- `config/providers.yaml`: new capability chains — `equity_candles` (alpaca),
+  `crypto_candles` (binance, hyperliquid), `macro_candles` (fred),
+  `equity_news` (finnhub), `earnings_calendar` (finnhub), `macro_calendar`
+  (fred).
+- New endpoints: `GET /market/candles`, `GET /market/news`,
+  `GET /market/calendar` (the last merges earnings + macro releases, same
+  pattern as `/market/tape`'s multi-capability composition).
+- 15 new backend tests (router generic-call fallback/TTL behavior + the
+  three new endpoints, including graceful partial-failure on `/calendar`).
+  56/56 backend tests green.
+
+Frontend (`apps/web/src/`):
+
+- Dark-first terminal design system in `app/globals.css`: CVD-checked token
+  palette (dataviz skill reference palette — categorical blue accent, status
+  green/red for quote deltas, diverging blue/red for the heatmap), Geist
+  Sans/Mono, spacing/radius scale. No light theme — deliberate, see
+  ADR-0009.
+- `Shell` (main menu + non-functional prompt bar + static persona-switcher
+  label — both wired for real in later phases per docs/PLAN.md), `Tape`
+  (global ticker strip).
+- Six block components per docs/PLAN.md P2 scope — `QuoteGrid` (stat tiles,
+  embeds `Sparkline`), `Sparkline`, `YieldCurve` (FRED tenors DGS1MO..DGS30,
+  hand-rolled SVG line chart), `Heatmap` (sector-ETF universe, diverging
+  blue/red fill), `NewsList`, `EconomicCalendar` — every one an async Server
+  Component hitting `lib/market.ts` directly, every one rendering an
+  explicit "unavailable" state on a failed/empty fetch rather than a
+  fabricated number (ADR-0009).
+- Fixed 12-column CSS Grid default layout (`app/page.module.css`),
+  responsive at the 1024px/768px breakpoints, collapsing to one column on
+  mobile.
+- `Block`/`BlockSkeleton`/`Unavailable` shared chrome with a fixed
+  `minHeight` per block so the Suspense-boundary skeleton→content swap
+  doesn't shift layout.
+- 20 new frontend tests (Testing Library) covering the live-data render path
+  and the graceful-degradation path for every block, plus `Shell`/
+  `Sparkline`/`Block`. Added RTL `cleanup()` to `vitest.setup.ts` (was
+  missing — first multi-test file surfaced cross-test DOM leakage).
+
+**Verified locally:**
+
+- `make test` / `make lint` / `make typecheck` all green (48 api + 1 worker
+  + 20 web tests; ruff/mypy/eslint/tsc all clean).
+- `next build` succeeds; `/` prerenders static with a 15s ISR revalidate,
+  113KB first-load JS.
+- Live end-to-end smoke test: dockerized Redis/Postgres up, real API server
+  + real Next dev server, no provider keys configured (same state as the P1
+  smoke test). Confirmed both required states render correctly on the same
+  page: **BTC** (keyless Binance) shows a real live price end-to-end through
+  `Tape` and `QuoteGrid`; **SPY/QQQ/yield-curve/heatmap/news/calendar** (all
+  need Finnhub/FRED/Alpaca keys not yet in `.env`) each render their explicit
+  "unavailable" message — never a stale placeholder or a zero.
+
+**Not done / deliberately deferred:**
+
+- No hover crosshair/tooltip on `YieldCurve` beyond native SVG `<title>` —
+  the dataviz skill's interaction layer is a nice-to-have here, not gated by
+  P2's DoD (Lighthouse + responsive + no layout shift), and the prompt
+  bar/persona-switcher precedent in P2's own spec ("prompt bar
+  (non-functional)") is to ship the visual shell now and wire interactivity
+  later.
+- No light theme / theme toggle — this is a terminal, not a marketing page;
+  P2 doesn't ask for one and the primary showcase context (screenshots,
+  demo) is dark.
+- No Lighthouse CI run yet — needs a deployed or tunneled URL; the
+  `next build` output (113KB first load, static prerender) is a strong
+  proxy but hasn't been scored. Flagged for the user to confirm ≥90 once
+  there's a URL to point Lighthouse at.
+- Equity/macro/news/calendar blocks are correctly built against real
+  endpoints but untested against live Finnhub/FRED/Alpaca responses in this
+  environment — same gap as P1, still blocked on API keys in `.env`.
+- `packages/shared` still has no generated TS types from the Pydantic
+  models — the frontend hand-maintains matching interfaces in
+  `lib/market.ts` instead; deferred again, now that the frontend actually
+  does consume this data, worth revisiting if the two start drifting.
+
+**Next:** Phase 3 — Attention engine (`docs/PLAN.md` section 7, P3). Do not
+start until the user has reviewed P2.
+
+---
+
 ## 2026-08-12 — P1: Market Data Gateway
 
 **Done (all in `apps/api/app/market/`):**

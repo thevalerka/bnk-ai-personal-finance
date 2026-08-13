@@ -1,8 +1,11 @@
+from datetime import UTC, date, datetime
+
 import pytest
 from redis.asyncio import Redis
 
 from app.market.budget import BudgetManager, ProviderBudget
 from app.market.cache import Cache
+from app.market.providers.base import DateRange
 from app.market.router import MarketDataUnavailable, Router
 from tests.market.conftest import FakeProvider, ProviderError
 
@@ -89,3 +92,67 @@ async def test_raises_when_capability_has_no_configured_chain(redis: Redis) -> N
 
     with pytest.raises(MarketDataUnavailable):
         await router.quote("unknown-capability", ["AAPL"])
+
+
+async def test_candles_falls_back_and_caches_like_quote(redis: Redis) -> None:
+    primary = FakeProvider("primary", error=ProviderError("primary is down"))
+    secondary = FakeProvider("secondary")
+    router = Router(
+        providers={"primary": primary, "secondary": secondary},
+        chains={"cap": ["primary", "secondary"]},
+        budget=BudgetManager(redis, {}),
+        cache=Cache(redis),
+        fresh_ttl_seconds=300,
+    )
+
+    first = await router.candles("cap", "AAPL", "1d", 10)
+    await router.candles("cap", "AAPL", "1d", 10)
+
+    assert first[0].source == "secondary"
+    assert secondary.calls == 1  # second call served from cache
+
+
+async def test_news_uses_its_own_ttl(redis: Redis) -> None:
+    provider = FakeProvider("primary")
+    router = Router(
+        providers={"primary": provider},
+        chains={"cap": ["primary"]},
+        budget=BudgetManager(redis, {}),
+        cache=Cache(redis),
+        news_ttl_seconds=300,
+    )
+
+    await router.news("cap", ["ai"], datetime.now(tz=UTC))
+    await router.news("cap", ["ai"], datetime.now(tz=UTC))
+
+    assert provider.calls == 1
+
+
+async def test_calendar_uses_its_own_ttl(redis: Redis) -> None:
+    provider = FakeProvider("primary")
+    router = Router(
+        providers={"primary": provider},
+        chains={"cap": ["primary"]},
+        budget=BudgetManager(redis, {}),
+        cache=Cache(redis),
+        calendar_ttl_seconds=3600,
+    )
+    window = DateRange(start=date(2026, 1, 1), end=date(2026, 1, 31))
+
+    await router.calendar("cap", window)
+    await router.calendar("cap", window)
+
+    assert provider.calls == 1
+
+
+async def test_candles_raises_when_every_provider_is_unreachable(redis: Redis) -> None:
+    provider = FakeProvider("primary", error=ProviderError("down"))
+    router = Router(
+        providers={"primary": provider},
+        chains={"cap": ["primary"]},
+        budget=BudgetManager(redis, {}),
+        cache=Cache(redis),
+    )
+
+    with pytest.raises(MarketDataUnavailable):
+        await router.candles("cap", "AAPL", "1d", 10)

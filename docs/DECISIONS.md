@@ -4,6 +4,67 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0009: Dashboard blocks are Server Components with a fixed layout, no chart library, no client state
+
+**Context:** P2 needs quote/sparkline/yield-curve/news/calendar/heatmap
+blocks that render real numbers server-side (CLAUDE.md non-negotiable: no
+number without a real provider response behind it) and must hit Lighthouse
+≥90 with no layout shift. The interest-vector-driven treemap layout is P3,
+not P2 — P2 explicitly asks for a "fixed default layout."
+
+**Decision:** Every block (`apps/web/src/components/*.tsx`) is an `async`
+React Server Component that calls `apps/web/src/lib/market.ts` directly
+(server-to-server fetch to the FastAPI gateway, no client-side data
+fetching, no state management library). Charts (`Sparkline`, `YieldCurve`,
+`Heatmap`) are hand-rolled inline SVG against the dataviz skill's mark specs
+rather than a charting dependency. The grid (`apps/web/src/app/page.module.css`)
+is a static 12-column CSS Grid with `grid-column: span N` per block and
+media-query overrides at the 1024px/768px breakpoints — no treemap solver
+yet. Every `fetch` in `market.ts` catches failures and returns `null` rather
+than throwing, and every block renders an explicit "unavailable" state on
+`null` instead of a fabricated or zeroed number.
+
+**Consequence:** Zero client JS shipped for data fetching or charting keeps
+the bundle small (113KB first load) and first paint populated straight from
+SSR/ISR (`next: { revalidate }` per block, matching docs/PLAN.md §3.1's
+per-capability TTLs: 15s quotes, 60s candles, 300s news, 3600s calendar).
+Cost: charts have no hover crosshair/tooltip beyond native SVG `<title>`,
+and the layout is hand-placed, not data-driven — both explicitly deferred to
+phase 3 (attention engine) rather than gold-plated now. Verified live: with
+no Finnhub/FRED/Alpaca keys configured on this box, BTC (keyless Binance)
+renders a real price end-to-end while every other block correctly renders
+"unavailable" instead of guessing — see docs/STATE.md P2 entry.
+
+---
+
+## ADR-0008: Router's cache→budget→fallback policy is generic across quote/candles/news/calendar
+
+**Context:** P1 shipped `Router.quote()` with cache-then-budget-then-vendor
+fallback (ADR-0004..0006). P2's blocks need `candles` (sparklines), `news`,
+and `calendar` too, and those capabilities need the identical policy — the
+only real differences are the cache key shape and freshness TTL (quotes/
+candles 30s, news 5min, calendar 1h per docs/PLAN.md §3.1).
+
+**Decision:** `Router` now has one private generic `_call()` that all four
+public methods (`quote`, `candles`, `news`, `calendar`) delegate to, each
+supplying its cache-key format, `CallSpec` cost, Pydantic model for cache
+deserialization, and a provider-invocation closure. `config/providers.yaml`
+gained `equity_candles`/`crypto_candles`/`macro_candles`/`equity_news`/
+`earnings_calendar`/`macro_calendar` chains — each currently single-provider
+(candles/news/calendar aren't fallback alternatives to each other the way
+`equity_quote`'s `[finnhub, alpaca]` is; each provider offers exactly one
+source for each of these, per ADR-0006).
+
+**Consequence:** Four capabilities share one tested code path instead of
+four near-duplicate ones; new candle/news/calendar REST endpoints
+(`/market/candles`, `/market/news`, `/market/calendar`) are thin wrappers.
+`/market/calendar` merges `earnings_calendar` + `macro_calendar` (both
+queried, not a fallback chain between them) the same way `/market/tape`
+already merges multiple capabilities — one provider being down degrades that
+slice, not the whole response.
+
+---
+
 ## ADR-0007: Crypto symbols are canonical coin names; providers translate
 
 **Context:** Binance's trading-pair convention ("BTCUSDT") and Hyperliquid's
