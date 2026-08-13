@@ -5,6 +5,52 @@ Newest entry first.
 
 ---
 
+## 2026-08-13 — Deploy to vespersoul.com + `.env` → `.ratx` rename
+
+**Done:**
+
+- Deployed the P2 build live: `amt-api` (uvicorn, 127.0.0.1:8100) and
+  `amt-web` (`next start`, 127.0.0.1:3000) as systemd units, nginx
+  reverse-proxying `vespersoul.com` → web and `api.vespersoul.com` → api
+  (existing Certbot cert/vhost reused, previously a static placeholder).
+  Reused the already-running dev-compose Postgres/Redis (5433/6380) — no
+  key/secret code currently touches Postgres.
+- Repo pushed to a new GitHub remote: `thevalerka/bnk-ai-personal-finance`
+  (public).
+- User preference: no `.env`-named files, even locally (ADR-0010). Renamed
+  `.env.example` → `.ratx.example`, `apps/api/.env` → `apps/api/.ratx`,
+  `apps/web/.env.production.local` → `apps/web/.ratx.production.local`,
+  added `apps/web/.ratx.example`. `apps/api`/`apps/worker` `config.py` now
+  point `SettingsConfigDict(env_file=".ratx")`. `apps/web/next.config.ts`
+  gained a small hand-rolled loader since Next.js only auto-loads
+  `.env*`-named files. `.gitignore` / `apps/web/.gitignore` updated to
+  ignore `.ratx`/`.ratx*` (with `!.ratx.example` carved out so the template
+  stays tracked).
+
+**Verified locally:** `make test` / `make lint` still green post-rename
+(same 48 api + 1 worker + 20 web). Rebuilt web, confirmed the new
+`127.0.0.1:8100` value actually got inlined into `.next/server` output
+(NEXT_PUBLIC_* vars are build-time-inlined, so this needed a real rebuild,
+not just a service restart). Restarted both systemd units, reconfirmed
+`https://vespersoul.com` (dashboard renders) and
+`https://api.vespersoul.com/market/tape` (live BTC price via Binance) both
+still serve correctly.
+
+**Not done / deliberately deferred:**
+
+- No provider keys deployed yet (Finnhub/FRED/Alpaca) — `apps/api/.ratx`
+  has them blank, same as local dev. SPY/QQQ/yield-curve/heatmap/news/
+  calendar correctly show "unavailable" on the live site rather than fake
+  data. Drop keys into `apps/api/.ratx` and restart `amt-api` when
+  available.
+- `apps/worker` isn't deployed — it's still a no-op APScheduler skeleton,
+  nothing in `/market/*` depends on it yet.
+- Deployment is systemd + manually-edited nginx config, not part of the
+  repo/CI — no redeploy script yet. Fine for a single-box demo, would need
+  revisiting before a second environment or a team touches this.
+
+---
+
 ## 2026-08-12 — P2: Static dashboard
 
 **Done:**

@@ -4,6 +4,39 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0010: Secrets live in `.ratx` files, not `.env`
+
+**Context:** User preference: don't use the standard `.env` filename for
+files holding real config/secrets, even locally. `.env` is the first thing
+any scanner, `find`, or careless `cat *` glob goes looking for; a
+non-standard name doesn't add cryptographic protection but does remove the
+free win an opportunistic script gets from guessing the filename, and costs
+nothing since both apps' config loaders take an explicit path anyway.
+
+**Decision:** Renamed `.env.example` → `.ratx.example` (root, for
+`apps/api`/`apps/worker`) and added `apps/web/.ratx.example`. Real files:
+`apps/api/.ratx`, `apps/web/.ratx.local` (dev) / `apps/web/.ratx.production.local`
+(prod) — never committed (`.gitignore` / `apps/web/.gitignore` updated from
+`.env`/`.env*` to `.ratx`/`.ratx*`). `apps/api/app/config.py` and
+`apps/worker/app/config.py`: `SettingsConfigDict(env_file=".ratx")`. Next.js
+only auto-loads files literally named `.env*`, so `apps/web/next.config.ts`
+gained a small hand-rolled loader (`loadRatxEnv`) that reads
+`.ratx`/`.ratx.$(NODE_ENV)`/`.ratx.local`/`.ratx.$(NODE_ENV).local` in that
+precedence — same low-to-high override order Next.js uses for `.env*` — and
+never overrides a var already present in the real shell environment.
+
+**Consequence:** No new dependency (the web loader is ~15 lines, no
+`dotenv` package). One thing to remember: `next build` (not `next start`)
+is what needs `apps/web/.ratx.production.local` present, since
+`NEXT_PUBLIC_*` vars are inlined at build time via webpack's define plugin
+— rebuild (`npm run build`) after changing it, a restart of `amt-web` alone
+won't pick up a change. Verified: rebuilt web, confirmed the inlined value
+in `.next/server` output, restarted both `amt-api`/`amt-web` systemd units,
+reconfirmed `https://vespersoul.com` and `https://api.vespersoul.com` both
+still serve correctly off the renamed files.
+
+---
+
 ## ADR-0009: Dashboard blocks are Server Components with a fixed layout, no chart library, no client state
 
 **Context:** P2 needs quote/sparkline/yield-curve/news/calendar/heatmap

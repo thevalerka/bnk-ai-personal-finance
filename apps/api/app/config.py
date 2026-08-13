@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".ratx", extra="ignore")
 
     env: str = "development"
     database_url: str = "postgresql://amt:amt@localhost:5433/amt"
