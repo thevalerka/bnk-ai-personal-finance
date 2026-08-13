@@ -12,3 +12,27 @@ crypto_quote:
 
 macro_series:
   - fred
+
+# candles/news/calendar chains are per-provider capability, not fallback
+# alternatives to each other — each provider offers exactly one of these,
+# so chains are single-entry until a second candle/news/calendar source is
+# added (see apps/api/app/market/providers/*.py capability notes).
+
+equity_candles:
+  - alpaca
+
+crypto_candles:
+  - binance
+  - hyperliquid
+
+macro_candles:
+  - fred
+
+equity_news:
+  - finnhub
+
+earnings_calendar:
+  - finnhub
+
+macro_calendar:
+  - fred
