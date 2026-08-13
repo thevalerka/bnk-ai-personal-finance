@@ -16,9 +16,9 @@ venv/
 .ruff_cache/
 *.egg-info/
 
-# Env
-.env
-.env.local
+# Env (renamed from .env to .ratx — see docs/DECISIONS.md ADR-0010)
+.ratx
+.ratx.local
 
 # OS
 .DS_Store

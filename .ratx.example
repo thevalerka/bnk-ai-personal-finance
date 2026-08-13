@@ -1,5 +1,9 @@
-# Copy to .env and fill in. Each app (apps/api, apps/worker) reads this via
-# pydantic-settings; apps/web reads NEXT_PUBLIC_* vars via Next.js directly.
+# Copy to .ratx and fill in. Each app (apps/api, apps/worker) reads this via
+# pydantic-settings (SettingsConfigDict(env_file=".ratx")) — a renamed
+# .env, kept off the standard dotenv filename on purpose, see
+# docs/DECISIONS.md ADR-0010. apps/web has its own copy: see
+# apps/web/.ratx.local (dev) / apps/web/.ratx.production.local (prod),
+# loaded by apps/web/next.config.ts.
 
 ENV=development
 
@@ -21,6 +25,3 @@ FRED_API_KEY=
 # Not wired to a provider yet — reserved for when Twelve Data/SEC EDGAR land.
 TWELVE_DATA_API_KEY=
 SEC_EDGAR_USER_AGENT=
-
-# --- Web (phase 2+) ---
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8100

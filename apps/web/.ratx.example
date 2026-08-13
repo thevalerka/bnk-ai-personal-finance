@@ -1,0 +1,6 @@
+# Copy to .ratx.local (dev) or .ratx.production.local (prod) and fill in.
+# Loaded by next.config.ts — a renamed .env.local/.env.production.local,
+# kept off the standard dotenv filename on purpose, see
+# docs/DECISIONS.md ADR-0010.
+
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8100

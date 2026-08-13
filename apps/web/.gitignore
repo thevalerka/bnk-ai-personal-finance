@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (renamed from .env* to .ratx* — see docs/DECISIONS.md ADR-0010;
+# can opt-in for committing if needed)
+.ratx*
+!.ratx.example
 
 # vercel
 .vercel
