@@ -18,8 +18,15 @@
   grid-column: span 7;
 }
 
+/* Heatmap/Calendar opt out of row-stretch: they share a row with News,
+   whose length is open-ended (article count), and matching its height
+   would blow the compact blocks up into mostly-empty cards. Quotes/
+   YieldCurve above keep the default stretch — that pairing's height gap
+   is modest enough that filling it (see Block.module.css's height: 100%)
+   reads as intentional instead of broken. */
 .heatmap {
   grid-column: span 5;
+  align-self: start;
 }
 
 .newsList {
@@ -28,6 +35,7 @@
 
 .calendar {
   grid-column: span 3;
+  align-self: start;
 }
 
 @media (max-width: 1023px) {

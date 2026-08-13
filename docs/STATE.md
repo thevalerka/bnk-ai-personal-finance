@@ -5,6 +5,61 @@ Newest entry first.
 
 ---
 
+## 2026-08-13 — Font-loading bug fix + layout dead-space fixes
+
+User reported the redesign was still rendering Times New Roman and looked
+"unbelievably ugly" despite the font/gradient/squared-corner pass below
+already being live. Verified via a headless Playwright check (computed
+`getComputedStyle`, not just a screenshot) rather than trusting the visual
+— confirmed the complaint was real, not client-side cache:
+
+- **Root cause**: `app/layout.tsx` put the `next/font/google` variable
+  classes (`--font-display`/`--font-data`) on `<body>`, while
+  `globals.css`'s `:root { --font-sans: var(--font-display), … }` lives on
+  `<html>`. `getComputedStyle(document.body).getPropertyValue('--font-sans')`
+  came back **empty** even though `--font-display` resolved fine on body —
+  a nested `var()` reference across two different elements in the
+  inheritance chain (defined on the ancestor, substituted variable set on
+  the descendant) resolved to a guaranteed-invalid value in Chromium,
+  which collapsed the whole `font-family` declaration to the UA default
+  (serif → Times New Roman). Fix: moved both variable classes onto
+  `<html>` so `:root` and the variables live on the same element — no
+  more cross-element indirection. Verified post-fix: `document.fonts`
+  shows `Space Grotesk`/`JetBrains Mono` status `loaded` and computed
+  `fontFamily` matches the declared stack.
+- While investigating, also fixed two real layout bugs the screenshots
+  surfaced (not part of the font bug, but contributing to "ugly"):
+  - `Block.module.css`'s `.block` never filled its CSS Grid cell — `Block`
+    sits one DOM level inside `page.module.css`'s grid-item wrappers
+    (`.quoteGrid`, `.yieldCurve`, …) since `Suspense` renders no element of
+    its own, so it never inherited the grid row's stretch and sized to its
+    own content instead. A short Quotes card next to a tall Yield Curve
+    card left a dead gap before the next row started. Fixed with
+    `.block { height: 100% }` + `QuoteGrid`'s tile grid getting
+    `align-content: center` so the now-taller card centers its tiles
+    rather than pinning them to the top.
+  - That same fix would have made `Heatmap`/`Calendar` stretch to match
+    `News`'s open-ended (article-count-dependent) height, blowing them up
+    into mostly-empty cards — opted them out via `align-self: start` in
+    `page.module.css` so only the Quotes/Yield-Curve pairing (a modest,
+    intentional-looking gap) stretches.
+  - `Heatmap.module.css`'s sector grid used CSS Grid `auto-fill`, which
+    left a ragged, non-full-width last row when the sector count didn't
+    divide evenly into a row. Switched to `display: flex; flex-wrap: wrap`
+    with `flex: 1 1 88px` cells, so a partial last row stretches to fill
+    instead of leaving empty grid tracks.
+
+**Verified:** `make test`/`lint`/`typecheck`/`build` all green. Rebuilt,
+restarted `amt-web`, and this time verified with a headless-browser
+computed-style check (not just a screenshot) before declaring it fixed —
+screenshot-only verification is what let the font bug ship in the first
+place.
+
+**Next:** Phase 3 — Attention engine (`docs/PLAN.md` section 7, P3). Do
+not start until the user has reviewed the live site.
+
+---
+
 ## 2026-08-13 — Font/gradient/squared-corner pass, deployed
 
 **Done:**

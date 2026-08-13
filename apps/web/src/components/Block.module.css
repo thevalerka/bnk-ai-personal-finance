@@ -1,4 +1,10 @@
 .block {
+  /* Block sits one DOM level inside its CSS Grid cell (page.module.css's
+     .quoteGrid/.yieldCurve/etc — Suspense renders no element of its own),
+     so it doesn't inherit the grid's row-stretch automatically; without
+     height: 100% it sizes to its own content and a shorter card in a
+     taller row leaves visible dead space before the next row starts. */
+  height: 100%;
   background: var(--panel-gradient);
   border: 1px solid var(--border);
   border-radius: var(--radius);
