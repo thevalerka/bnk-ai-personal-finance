@@ -1,58 +1,86 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-3);
 }
 
 .tile {
   background: var(--surface-2);
-  border-radius: var(--radius);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.symbol {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 600;
+.tile:hover {
+  border-color: var(--border);
+  transform: translateY(-1px);
 }
 
-.price {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.deltaRow {
+.tileTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.delta {
+.symbol {
   font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.price {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.sparklineRow svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.delta {
+  font-size: 11px;
+  font-weight: 600;
   font-family: var(--font-mono);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
 }
 
 .deltaUp {
   color: var(--positive);
+  background: var(--positive-wash);
 }
 
 .deltaDown {
   color: var(--negative);
+  background: var(--negative-wash);
 }
 
 .deltaFlat {
   color: var(--text-muted);
+  background: var(--surface-1);
 }
 
 .tileUnavailable {
   background: var(--surface-2);
-  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
   padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.unavailableLabel {
   color: var(--text-muted);
   font-size: 12px;
 }

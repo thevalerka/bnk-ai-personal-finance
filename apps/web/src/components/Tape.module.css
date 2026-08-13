@@ -1,12 +1,42 @@
 .tape {
-  display: flex;
-  gap: var(--space-5);
-  overflow-x: auto;
-  padding: var(--space-2) var(--space-4);
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  scrollbar-width: thin;
+}
+
+.viewport {
+  overflow: hidden;
+  padding: var(--space-2) 0;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black var(--space-4),
+    black calc(100% - var(--space-4)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black var(--space-4),
+    black calc(100% - var(--space-4)),
+    transparent
+  );
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  animation: scroll 32s linear infinite;
+}
+
+.tape:hover .track {
+  animation-play-state: paused;
+}
+
+.trackSegment {
+  display: flex;
+  gap: var(--space-5);
+  padding: 0 var(--space-4);
+  flex-shrink: 0;
 }
 
 .item {
@@ -14,6 +44,7 @@
   align-items: baseline;
   gap: var(--space-2);
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .symbol {
@@ -25,12 +56,20 @@
   color: var(--text-primary);
 }
 
+.pill {
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
 .deltaUp {
   color: var(--positive);
+  background: var(--positive-wash);
 }
 
 .deltaDown {
   color: var(--negative);
+  background: var(--negative-wash);
 }
 
 .deltaFlat {
@@ -38,7 +77,30 @@
 }
 
 .empty {
+  display: block;
   color: var(--text-muted);
   font-size: 13px;
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-4);
+}
+
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .track {
+    animation: none;
+  }
+  .trackSegment[aria-hidden="true"] {
+    display: none;
+  }
 }

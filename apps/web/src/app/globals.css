@@ -19,9 +19,17 @@
 
   --accent: #3987e5;
   --accent-wash: rgba(57, 135, 229, 0.1);
+  --accent-wash-strong: rgba(57, 135, 229, 0.18);
+
+  /* categorical slot 2 (orange) — used for a second identity, e.g. the
+     macro-release dot beside earnings' accent-blue dot in EconomicCalendar */
+  --series-2: #d95926;
+  --series-2-wash: rgba(217, 89, 38, 0.16);
 
   --positive: #0ca30c;
+  --positive-wash: rgba(12, 163, 12, 0.14);
   --negative: #e66767;
+  --negative-wash: rgba(230, 103, 103, 0.14);
   --neutral: #898781;
 
   --warning: #fab219;
@@ -36,7 +44,17 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 0 1px var(--accent-wash-strong);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 120ms var(--ease);
+  --transition: 200ms var(--ease);
 }
 
 * {
@@ -53,7 +71,11 @@ body {
 
 body {
   color: var(--text-primary);
-  background: var(--surface-0);
+  /* Faint radial vignette off the flat page plane — depth without a texture,
+     imperceptible until you're looking for it. */
+  background:
+    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(57, 135, 229, 0.05), transparent 60%),
+    var(--surface-0);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -73,4 +95,44 @@ table {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-wash-strong);
+  color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--baseline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

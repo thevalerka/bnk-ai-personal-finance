@@ -1,3 +1,12 @@
+.wrap {
+  width: 100%;
+}
+
+.svg {
+  cursor: crosshair;
+  overflow: visible;
+}
+
 .gridline {
   stroke: var(--gridline);
   stroke-width: 1;
@@ -10,19 +19,67 @@
   stroke-linejoin: round;
 }
 
+.crosshair {
+  stroke: var(--baseline);
+  stroke-width: 1;
+}
+
 .dot {
   fill: var(--accent);
   stroke: var(--surface-1);
   stroke-width: 2;
+  transition: r var(--transition-fast);
 }
 
 .endLabel {
   fill: var(--text-secondary);
   font-size: 11px;
   font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .axisLabel {
   fill: var(--text-muted);
   font-size: 10px;
+  transition: fill var(--transition-fast);
+}
+
+.axisLabelActive {
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.tooltip {
+  pointer-events: none;
+}
+
+.tooltipBg {
+  fill: var(--surface-2);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.tooltipLabel {
+  fill: var(--text-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tooltipValue {
+  fill: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* Eleven tenor labels collide on a narrow phone-width card — thin to every
+   other one (1M, 6M, 2Y, 5Y, 10Y, 30Y) rather than let them overlap into
+   noise. The dropped tenors are still plottable via the crosshair/tooltip,
+   which works the same on touch (focus/hit-rect), so no value is gated. */
+@media (max-width: 480px) {
+  .axisLabels text:nth-child(even) {
+    display: none;
+  }
 }

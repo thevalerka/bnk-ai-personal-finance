@@ -2,36 +2,65 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 2px;
 }
 
 .item {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  grid-template-columns: 44px 1fr auto;
   gap: var(--space-2);
-  align-items: baseline;
+  align-items: center;
   font-size: 12px;
-  padding-bottom: var(--space-2);
+  padding: var(--space-2);
+  margin: 0 calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
   border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.item:hover {
+  background: var(--surface-2);
 }
 
 .item:last-child {
   border-bottom: none;
-  padding-bottom: 0;
 }
 
 .date {
   color: var(--text-secondary);
   font-size: 11px;
+  font-weight: 600;
 }
 
 .title {
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kind {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--text-muted);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotEarnings {
+  background: var(--accent);
+}
+
+.dotMacro {
+  background: var(--series-2);
 }

@@ -1,5 +1,6 @@
 import { fetchCandles, fetchQuote, type Candle, type Quote } from "@/lib/market";
 import { Sparkline } from "./Sparkline";
+import { Unavailable } from "./Block";
 import styles from "./QuoteGrid.module.css";
 
 export interface QuoteGroup {
@@ -20,7 +21,7 @@ function DeltaLabel({ quote }: { quote: Quote }) {
   const direction = pct > 0 ? styles.deltaUp : pct < 0 ? styles.deltaDown : styles.deltaFlat;
   const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "•";
   return (
-    <span className={`${styles.delta} ${direction}`}>
+    <span className={`${styles.delta} ${direction} tabular-nums`}>
       {arrow} {Math.abs(pct).toFixed(2)}%
     </span>
   );
@@ -56,7 +57,7 @@ export async function QuoteGrid({ groups }: { groups: QuoteGroup[] }) {
   const symbols = groups.flatMap((g) => g.symbols);
 
   if (quotesBySymbol.size === 0) {
-    return <p style={{ color: "var(--text-muted)", fontSize: 13 }}>No live quotes reachable right now.</p>;
+    return <Unavailable reason="No live quotes reachable right now." />;
   }
 
   return (
@@ -67,19 +68,25 @@ export async function QuoteGrid({ groups }: { groups: QuoteGroup[] }) {
           return (
             <div key={symbol} className={styles.tileUnavailable}>
               <div className={styles.symbol}>{symbol}</div>
-              <div>unavailable</div>
+              <div className={styles.unavailableLabel}>unavailable</div>
             </div>
           );
         }
         const candles = candlesBySymbol.get(symbol);
+        const pct = quote.change_percent;
+        const trend = pct === null || pct === undefined || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
         return (
           <div key={symbol} className={styles.tile}>
-            <div className={styles.symbol}>{symbol}</div>
-            <div className={`${styles.price} tabular-nums`}>{formatPrice(quote.price)}</div>
-            <div className={styles.deltaRow}>
+            <div className={styles.tileTop}>
+              <span className={styles.symbol}>{symbol}</span>
               <DeltaLabel quote={quote} />
-              {candles ? <Sparkline candles={candles} width={72} height={22} /> : null}
             </div>
+            <div className={styles.price}>{formatPrice(quote.price)}</div>
+            {candles ? (
+              <div className={styles.sparklineRow}>
+                <Sparkline candles={candles} width={140} height={32} trend={trend} />
+              </div>
+            ) : null}
           </div>
         );
       })}

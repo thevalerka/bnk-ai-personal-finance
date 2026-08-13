@@ -1,4 +1,5 @@
 import { fetchNews } from "@/lib/market";
+import { Unavailable } from "./Block";
 import styles from "./NewsList.module.css";
 
 function relativeTime(iso: string): string {
@@ -14,7 +15,7 @@ export async function NewsList() {
   const items = await fetchNews();
 
   if (!items || items.length === 0) {
-    return <p style={{ color: "var(--text-muted)", fontSize: 13 }}>News unavailable — no provider reachable.</p>;
+    return <Unavailable reason="News unavailable — no provider reachable." />;
   }
 
   return (
@@ -23,9 +24,18 @@ export async function NewsList() {
         <li key={item.id} className={styles.item}>
           <a href={item.url} target="_blank" rel="noreferrer" className={styles.headline}>
             {item.headline}
+            <svg className={styles.linkIcon} width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M7 17 17 7M17 7H9m8 0v8"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </a>
           <div className={styles.meta}>
-            <span>{item.source}</span>
+            <span className={styles.source}>{item.source}</span>
             <span>{relativeTime(item.ts)}</span>
           </div>
         </li>
