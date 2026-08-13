@@ -18,8 +18,11 @@ describe("Tape", () => {
 
     render(await Tape());
 
-    expect(screen.getByText("BTC")).toBeInTheDocument();
-    expect(screen.getByText("61,234")).toBeInTheDocument();
+    // The marquee track renders the quote list twice (duplicated for a
+    // seamless CSS scroll loop — the second copy is aria-hidden) so each
+    // value legitimately appears twice in the DOM.
+    expect(screen.getAllByText("BTC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("61,234").length).toBeGreaterThan(0);
   });
 
   it("shows an unavailable message rather than an empty or fabricated tape", async () => {

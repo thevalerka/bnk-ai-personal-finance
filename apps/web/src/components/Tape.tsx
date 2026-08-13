@@ -1,19 +1,9 @@
-import { fetchTape } from "@/lib/market";
+import { fetchTape, type Quote } from "@/lib/market";
 import styles from "./Tape.module.css";
 
-export async function Tape() {
-  const quotes = await fetchTape();
-
-  if (!quotes || quotes.length === 0) {
-    return (
-      <div className={styles.tape}>
-        <span className={styles.empty}>Global tape unavailable — no provider reachable.</span>
-      </div>
-    );
-  }
-
+function TapeItems({ quotes }: { quotes: Quote[] }) {
   return (
-    <div className={styles.tape} role="marquee" aria-label="global market tape">
+    <>
       {quotes.map((quote) => {
         const pct = quote.change_percent;
         const direction = pct === null || pct === undefined || pct === 0
@@ -29,13 +19,40 @@ export async function Tape() {
               {quote.price >= 1000 ? quote.price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : quote.price.toFixed(2)}
             </span>
             {pct !== null && pct !== undefined ? (
-              <span className={`${direction} tabular-nums`}>
+              <span className={`${direction} ${styles.pill} tabular-nums`}>
                 {arrow} {Math.abs(pct).toFixed(2)}%
               </span>
             ) : null}
           </span>
         );
       })}
+    </>
+  );
+}
+
+export async function Tape() {
+  const quotes = await fetchTape();
+
+  if (!quotes || quotes.length === 0) {
+    return (
+      <div className={styles.tape}>
+        <span className={styles.empty}>Global tape unavailable — no provider reachable.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.tape} role="marquee" aria-label="global market tape">
+      <div className={styles.viewport}>
+        <div className={styles.track}>
+          <div className={styles.trackSegment}>
+            <TapeItems quotes={quotes} />
+          </div>
+          <div className={styles.trackSegment} aria-hidden="true">
+            <TapeItems quotes={quotes} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

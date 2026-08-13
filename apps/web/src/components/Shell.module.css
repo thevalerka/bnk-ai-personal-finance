@@ -1,20 +1,40 @@
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: var(--space-5);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
+  background: rgba(13, 13, 13, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   flex-wrap: wrap;
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
-.brand span {
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--positive);
+  box-shadow: 0 0 0 3px var(--positive-wash);
+  animation: pulse 2.4s var(--ease) infinite;
+  flex-shrink: 0;
+}
+
+.brandAccent {
   color: var(--accent);
 }
 
@@ -25,28 +45,73 @@
   color: var(--text-muted);
 }
 
+.nav span {
+  transition: color var(--transition-fast);
+  cursor: default;
+}
+
+.navActive {
+  color: var(--text-primary);
+  position: relative;
+}
+
+.navActive::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -13px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
 .promptBar {
   flex: 1;
   min-width: 200px;
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+.promptIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .promptInput {
   width: 100%;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3) var(--space-2) 34px;
   color: var(--text-muted);
   font-size: 13px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.promptInput:hover {
+  border-color: var(--baseline);
+  background: var(--surface-2);
 }
 
 .persona {
   font-size: 11px;
   color: var(--text-muted);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
   white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--positive-wash);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
 }
