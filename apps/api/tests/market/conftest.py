@@ -50,13 +50,35 @@ class FakeProvider:
         return [Quote(symbol=s, price=1.0, ts=now, source=self.name) for s in symbols]
 
     async def candles(self, symbol: str, tf: str, limit: int) -> list[Candle]:
-        raise NotImplementedError
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        now = datetime.now(tz=UTC)
+        return [
+            Candle(symbol=symbol, ts=now, open=1.0, high=1.0, low=1.0, close=1.0, source=self.name)
+        ]
 
     async def news(self, topics: list[str], since: datetime) -> list[NewsItem]:
-        raise NotImplementedError
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        now = datetime.now(tz=UTC)
+        return [
+            NewsItem(
+                id="1",
+                ts=now,
+                headline="headline",
+                url="https://example.com",
+                source=self.name,
+            )
+        ]
 
     async def calendar(self, window: DateRange) -> list[Event]:
-        raise NotImplementedError
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        now = datetime.now(tz=UTC)
+        return [Event(ts=now, kind="test", importance=1, title="event", source=self.name)]
 
     def cost(self, call: CallSpec) -> int:
         return self._cost_value
