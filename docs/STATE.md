@@ -5,6 +5,37 @@ Newest entry first.
 
 ---
 
+## 2026-08-15 — Housekeeping: committed and pushed several days of uncommitted work
+
+User re-requested the four features from the entry directly below (earnings
+calendar/Polymarket, World Map → country detail pages, Forex, more news
+sources) — turned out all four, plus everything back through P3 (attention
+engine), were already built, tested, and previously verified live, but had
+never been `git commit`ed. `git status` showed 135 files of accumulated
+work sitting in the working tree.
+
+Re-verified `make test` (137 api + 1 worker + 57 web) and `make lint`
+(ruff, mypy ×2, eslint) still green on the snapshot, then committed it all
+in one checkpoint (`6b20a7f`) and pushed to `origin/main`. Excluded two
+untracked scratch screenshots (`last.png`, `Screenshot 2026-08-09
+125844.png`) not referenced anywhere in code/docs — kept `design-dark.png`
+since it's a real cited design reference (`globals.css`, ADR-0014).
+
+Rebuilt and restarted both `amt-api`/`amt-web`; re-confirmed live via curl:
+`/market/quote?capability=macro_series` (Forex), `/market/predictions`,
+`/market/world`, `/market/news` (now includes `rss_media` alongside
+`finnhub`), homepage, and `/country/392` all returning real data / 200s.
+
+**Not done:** no attempt to retroactively split this into per-feature
+commits matching each STATE.md entry below — the diffs are too
+cross-cutting (e.g. `market.py`/`schemas.py` touched by nearly every entry)
+to separate cleanly after the fact. If a clean bisectable history matters
+later, it doesn't exist for this range.
+
+**Next:** unchanged — Phase 4, Agent (`docs/PLAN.md` section 7, P4).
+
+---
+
 ## 2026-08-14 — Prediction Markets, World Map country pages, Forex panel, CNBC/MarketWatch news
 
 Ninth same-day follow-up, four asks in one message. Full detail in
