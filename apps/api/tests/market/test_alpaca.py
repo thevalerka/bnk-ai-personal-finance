@@ -49,6 +49,21 @@ async def test_candles_parses_bars(http_client: httpx.AsyncClient) -> None:
     assert candles[0].volume == 123456
 
 
+@respx.mock
+async def test_candles_handles_null_bars(http_client: httpx.AsyncClient) -> None:
+    # Alpaca returns {"bars": null} (not an empty list) when a request omits
+    # an explicit start date — regression test for the resulting
+    # `.get("bars", [])` gotcha (a present-but-null key bypasses the default).
+    respx.get("https://data.alpaca.markets/v2/stocks/AAPL/bars").mock(
+        return_value=httpx.Response(200, json={"bars": None, "symbol": "AAPL"})
+    )
+    provider = AlpacaProvider(http_client, api_key="key", api_secret="secret")
+
+    candles = await provider.candles("AAPL", tf="1d", limit=5)
+
+    assert candles == []
+
+
 async def test_news_and_calendar_raise_not_implemented(http_client: httpx.AsyncClient) -> None:
     provider = AlpacaProvider(http_client, api_key="key", api_secret="secret")
 

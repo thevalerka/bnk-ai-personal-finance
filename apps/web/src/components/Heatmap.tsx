@@ -12,8 +12,12 @@ const CLAMP_PCT = 3;
 function cellColor(pct: number): string {
   const clamped = Math.max(-CLAMP_PCT, Math.min(CLAMP_PCT, pct));
   const intensity = Math.abs(clamped) / CLAMP_PCT;
-  const hue = clamped >= 0 ? "57, 135, 229" : "230, 103, 103"; // accent blue / negative red
-  return `rgba(${hue}, ${(0.14 + intensity * 0.66).toFixed(2)})`;
+  // rgba(var(--x-rgb), alpha): a raw custom property, substituted by the
+  // browser at paint time — stays theme-reactive even though this string is
+  // built here in a Server Component with no knowledge of the client's
+  // chosen theme (globals.css, --accent-rgb/--negative-rgb).
+  const rgbVar = clamped >= 0 ? "var(--accent-rgb)" : "var(--negative-rgb)";
+  return `rgba(${rgbVar}, ${(0.14 + intensity * 0.66).toFixed(2)})`;
 }
 
 export async function Heatmap() {

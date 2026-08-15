@@ -31,8 +31,37 @@ macro_candles:
 equity_news:
   - finnhub
 
+# Primary-source Fed news (FOMC statements, official speeches), merged
+# alongside equity_news rather than a fallback for it — see SOURCES.md's
+# "the calendar comes from primary sources" rule, applied here to news too.
+macro_news:
+  - federal_reserve
+
 earnings_calendar:
   - finnhub
 
 macro_calendar:
   - fred
+
+# Treasury auction schedule — keyless, forward-looking, primary source
+# (docs/DECISIONS.md ADR-0017).
+auction_calendar:
+  - treasury
+
+# Regional Fed president speeches, straight from the bank's own RSS —
+# merged alongside equity_news/macro_news, same rationale as macro_news
+# above (docs/DECISIONS.md ADR-0018).
+regional_fed_news:
+  - regional_feds
+
+# 8-K filings for a curated ticker set, straight from EDGAR — merged
+# alongside the other news chains, same rationale as macro_news
+# (docs/DECISIONS.md ADR-0019).
+sec_filings_news:
+  - sec_edgar
+
+# Keyless breadth market news (CNBC, MarketWatch RSS) — merged alongside
+# the other news chains, same rationale as macro_news (docs/DECISIONS.md
+# ADR-0023).
+media_news:
+  - rss_media

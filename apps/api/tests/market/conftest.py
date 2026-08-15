@@ -10,7 +10,7 @@ from fakeredis import FakeAsyncRedis
 from redis.asyncio import Redis
 
 from app.market.providers.base import CallSpec, DateRange, ProviderError
-from app.market.schemas import Candle, Event, NewsItem, Quote
+from app.market.schemas import Candle, Event, FinancialPeriod, NewsItem, PredictionMarket, Quote
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -82,6 +82,40 @@ class FakeProvider:
 
     def cost(self, call: CallSpec) -> int:
         return self._cost_value
+
+    async def fundamentals(
+        self, ticker: str, annual_limit: int = 5, quarterly_limit: int = 8
+    ) -> list[FinancialPeriod]:
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        return [
+            FinancialPeriod(
+                period_end=datetime.now(tz=UTC).date(),
+                fiscal_period="FY",
+                form="10-K",
+                revenue=100.0,
+                gross_profit=40.0,
+                gross_margin_pct=40.0,
+                operating_income=20.0,
+                operating_margin_pct=20.0,
+                net_income=15.0,
+                net_margin_pct=15.0,
+            )
+        ]
+
+    async def probability(self, limit: int = 12) -> list[PredictionMarket]:
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        return [
+            PredictionMarket(
+                question="Will the Fed hold rates?",
+                probability_pct=75.5,
+                volume_24h=100000.0,
+                url="https://polymarket.com/event/test",
+            )
+        ]
 
 
 __all__ = ["FakeProvider", "ProviderError", "load_fixture"]

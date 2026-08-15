@@ -1,38 +1,57 @@
-/* Dark-first terminal design system. Palette validated for CVD-safe
-   categorical/status separation on the dark chart surface (docs/DECISIONS.md
-   ADR — dataviz skill reference palette). No light theme yet: this is a
-   trading terminal, not a marketing page, and P2 doesn't ask for a toggle. */
+/* Two token-complete palettes, switched via [data-theme] on <html>
+   (ThemeToggle.tsx). Light is the default (bare :root); dark is a
+   redesigned second theme — bluer surfaces, stronger gradients, and the
+   monospace face promoted to the primary font — not the original
+   dark-only palette from ADR-0009 (superseded, see ADR-0014). Every
+   component consumes these tokens rather than hardcoding colors, which is
+   what makes a second theme a CSS-only change. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --surface-0: #0d0d0d; /* page plane */
-  --surface-1: #1a1a19; /* panel / card */
-  --surface-2: #232322; /* elevated / hover */
+  --surface-0: #f4f5f7; /* page plane */
+  --surface-1: #ffffff; /* panel / card */
+  --surface-2: #eef0f3; /* elevated / hover */
 
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
+  --text-primary: #14151a;
+  --text-secondary: #4b4f58;
+  --text-muted: #6b707a;
 
-  --border: rgba(255, 255, 255, 0.1);
-  --gridline: #2c2c2a;
-  --baseline: #383835;
+  /* Text color placed directly on a heatmap/map fill (Heatmap.module.css,
+     WorldMap.tsx) — those fills are validated-palette washes over the page
+     background, so their ideal label color flips with the theme (dark text
+     reads on light theme's pastel-tinted fills; white reads on dark
+     theme's saturated ones) independent of --text-primary. */
+  --on-fill-text: #14151a;
 
-  --accent: #3987e5;
-  --accent-wash: rgba(57, 135, 229, 0.1);
-  --accent-wash-strong: rgba(57, 135, 229, 0.18);
+  --border: rgba(20, 21, 30, 0.1);
+  --gridline: #e3e5e9;
+  --baseline: #c7cbd2;
+
+  --accent: #2f6fe0;
+  --accent-rgb: 47, 111, 224;
+  --accent-wash: rgba(47, 111, 224, 0.08);
+  --accent-wash-strong: rgba(47, 111, 224, 0.16);
 
   /* categorical slot 2 (orange) — used for a second identity, e.g. the
      macro-release dot beside earnings' accent-blue dot in EconomicCalendar */
-  --series-2: #d95926;
-  --series-2-wash: rgba(217, 89, 38, 0.16);
+  --series-2: #b8460d;
+  --series-2-wash: rgba(184, 70, 13, 0.12);
 
-  --positive: #0ca30c;
-  --positive-wash: rgba(12, 163, 12, 0.14);
-  --negative: #e66767;
-  --negative-wash: rgba(230, 103, 103, 0.14);
-  --neutral: #898781;
+  /* -rgb triplets exist so Server Components that compute a fill's alpha
+     from a data value (Heatmap.tsx, WorldMap.tsx) can still build a
+     theme-reactive `rgba(var(--x-rgb), alpha)` inline style — a raw CSS
+     custom property is substituted by the browser at paint time using
+     whichever theme is active, even though the string itself was built
+     server-side without knowing the client's theme choice. */
+  --positive: #098509;
+  --positive-rgb: 9, 133, 9;
+  --positive-wash: rgba(9, 133, 9, 0.12);
+  --negative: #c23b3b;
+  --negative-rgb: 194, 59, 59;
+  --negative-wash: rgba(194, 59, 59, 0.12);
+  --neutral: #6b707a;
 
-  --warning: #fab219;
+  --warning: #8f5c07;
 
   --font-sans: var(--font-display), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-data), ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -44,28 +63,88 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* Squared, not rounded — a terminal has edges. Kept at 2px rather than a
-     literal 0 so hairline borders don't alias into a jagged corner pixel;
-     reads as square at normal viewing distance. */
+  /* Squared, not rounded — a terminal has edges, in either theme. Kept at
+     2px rather than a literal 0 so hairline borders don't alias into a
+     jagged corner pixel; reads as square at normal viewing distance. */
   --radius-sm: 2px;
   --radius: 2px;
   --radius-pill: 2px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(20, 21, 30, 0.08);
+  --shadow-md: 0 8px 24px -8px rgba(20, 21, 30, 0.16);
   --shadow-glow: 0 0 0 1px var(--accent-wash-strong);
 
   /* Decorative surface gradients — chrome only (panels, header, inputs).
-     Data marks (sparklines, heatmap cells, yield-curve line) stay flat/
-     validated-palette; a gradient there would distort the value encoding. */
-  --panel-gradient: linear-gradient(165deg, var(--surface-2) 0%, var(--surface-1) 55%, var(--surface-1) 100%);
-  --tile-gradient: linear-gradient(165deg, #29292b 0%, var(--surface-2) 65%);
-  --header-gradient: linear-gradient(180deg, rgba(20, 20, 22, 0.9), rgba(11, 11, 12, 0.86));
+     Data marks (sparklines, heatmap cells, yield-curve line, world map)
+     stay flat/validated-palette; a gradient there would distort the value
+     encoding. */
+  --panel-gradient: linear-gradient(165deg, #ffffff 0%, var(--surface-2) 100%);
+  --tile-gradient: linear-gradient(165deg, #ffffff 0%, var(--surface-2) 65%);
+  --header-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 245, 247, 0.86));
   --brand-gradient: linear-gradient(120deg, var(--accent) 0%, var(--series-2) 100%);
+
+  --body-bg:
+    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(47, 111, 224, 0.06), transparent 60%),
+    linear-gradient(165deg, #f8f9fb 0%, #f4f5f7 45%, #eef0f3 100%);
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 120ms var(--ease);
   --transition: 200ms var(--ease);
+}
+
+/* Redesigned dark theme: bluer near-black surfaces, brighter/more neon
+   status colors, gradients pushed harder, and the monospace face promoted
+   to --font-sans so body copy reads as technical/"robotic" rather than
+   humanist — reference: design-dark.png. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-0: #090b10;
+  --surface-1: #12161f;
+  --surface-2: #1b2130;
+
+  --text-primary: #f2f4f8;
+  --text-secondary: #b7bfcf;
+  --text-muted: #7c869c;
+
+  --on-fill-text: #ffffff;
+
+  --border: rgba(130, 160, 220, 0.16);
+  --gridline: #232a3d;
+  --baseline: #2c344a;
+
+  --accent: #4f8ff5;
+  --accent-rgb: 79, 143, 245;
+  --accent-wash: rgba(79, 143, 245, 0.12);
+  --accent-wash-strong: rgba(79, 143, 245, 0.2);
+
+  --series-2: #e2712f;
+  --series-2-wash: rgba(226, 113, 47, 0.16);
+
+  --positive: #22d66b;
+  --positive-rgb: 34, 214, 107;
+  --positive-wash: rgba(34, 214, 107, 0.14);
+  --negative: #ff4d6a;
+  --negative-rgb: 255, 77, 106;
+  --negative-wash: rgba(255, 77, 106, 0.14);
+  --neutral: #7c869c;
+
+  --warning: #ffc233;
+
+  --font-sans: var(--font-data), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 28px -8px rgba(0, 0, 0, 0.55);
+
+  --panel-gradient: linear-gradient(165deg, #232b42 0%, #141a28 55%, #10141f 100%);
+  --tile-gradient: linear-gradient(165deg, #29314a 0%, var(--surface-2) 65%);
+  --header-gradient: linear-gradient(180deg, rgba(18, 22, 34, 0.92), rgba(9, 11, 16, 0.88));
+  --brand-gradient: linear-gradient(120deg, var(--accent) 0%, #22d6c9 100%);
+
+  --body-bg:
+    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(79, 143, 245, 0.14), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 100% 10%, rgba(34, 214, 201, 0.06), transparent 60%),
+    linear-gradient(165deg, #0d1119 0%, #090b10 45%, #07080c 100%);
 }
 
 * {
@@ -82,17 +161,13 @@ body {
 
 body {
   color: var(--text-primary);
-  /* Radial accent bloom off the top plus a faint diagonal sweep between two
-     near-black stops — depth and direction without ever lifting off dark
-     enough to threaten text contrast. */
-  background:
-    radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(57, 135, 229, 0.07), transparent 60%),
-    linear-gradient(165deg, #101012 0%, #0d0d0d 45%, #0a0a0b 100%);
+  background: var(--body-bg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 1.4;
+  transition: background var(--transition), color var(--transition);
 }
 
 a {

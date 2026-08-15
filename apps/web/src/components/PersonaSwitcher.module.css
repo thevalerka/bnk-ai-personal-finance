@@ -1,0 +1,74 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.trigger:hover {
+  border-color: var(--baseline);
+  color: var(--text-secondary);
+}
+
+.value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 30;
+  width: 260px;
+  list-style: none;
+  background: var(--panel-gradient);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-1);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.option:hover {
+  background: var(--surface-2);
+}
+
+.optionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.option[aria-selected="true"] .optionLabel {
+  color: var(--accent);
+}
+
+.optionDesc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}

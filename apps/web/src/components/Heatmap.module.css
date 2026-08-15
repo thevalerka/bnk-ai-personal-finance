@@ -20,7 +20,7 @@
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  color: #ffffff;
+  color: var(--on-fill-text);
   cursor: default;
   transition: transform var(--transition-fast), filter var(--transition-fast);
 }
@@ -57,10 +57,10 @@
   border-radius: var(--radius-pill);
   background: linear-gradient(
     90deg,
-    rgba(230, 103, 103, 0.8),
-    rgba(230, 103, 103, 0.14) 45%,
+    rgba(var(--negative-rgb), 0.8),
+    rgba(var(--negative-rgb), 0.14) 45%,
     var(--surface-2) 50%,
-    rgba(57, 135, 229, 0.14) 55%,
-    rgba(57, 135, 229, 0.8)
+    rgba(var(--accent-rgb), 0.14) 55%,
+    rgba(var(--accent-rgb), 0.8)
   );
 }

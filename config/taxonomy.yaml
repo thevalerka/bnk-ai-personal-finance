@@ -1,0 +1,91 @@
+# Attention-engine taxonomy DAG (docs/PLAN.md section 4.2):
+#   asset_class -> bucket -> node -> instrument
+# Every event maps to one or more nodes; score propagates up the DAG with
+# decay (node 1.0, bucket 0.6, asset_class 0.3 — apps/api/app/attention/decay.py).
+#
+# `default_weight` is the cold-start interest vector (docs/PLAN.md section
+# 4.4) and must sum to 1.0 across the entries that carry one. `derivatives`
+# has no cold-start weight (phase 6+ options/perps). `fx` is structurally
+# present per the taxonomy spec but has no instruments yet — no FX provider
+# is wired in config/providers.yaml, and we never fabricate a live block for
+# an asset class with no real data behind it.
+#
+# Instrument symbols here are exactly what apps/api/app/api/market.py's tape
+# composition and the P2 dashboard blocks already query for real — this file
+# describes what the app *does*, not an aspirational catalog.
+
+asset_classes:
+  equities:
+    default_weight: 0.35
+    buckets:
+      us_large_cap:
+        nodes:
+          broad_market:
+            instruments: [SPY, QQQ]
+          technology:
+            instruments: [XLK]
+          financials:
+            instruments: [XLF]
+          healthcare:
+            instruments: [XLV]
+          discretionary:
+            instruments: [XLY]
+          staples:
+            instruments: [XLP]
+          energy_sector:
+            instruments: [XLE]
+          industrials:
+            instruments: [XLI]
+          materials:
+            instruments: [XLB]
+          real_estate:
+            instruments: [XLRE]
+          utilities:
+            instruments: [XLU]
+          communications:
+            instruments: [XLC]
+
+  fixed_income:
+    default_weight: 0.25
+    buckets:
+      rates_ust:
+        nodes:
+          short_end:
+            instruments: [DGS1MO, DGS3MO, DGS6MO, DGS1]
+          belly:
+            instruments: [DGS2, DGS3, DGS5, DGS7]
+          long_end:
+            instruments: [DGS10, DGS20, DGS30]
+
+  macro:
+    default_weight: 0.15
+    buckets:
+      cross_asset:
+        nodes:
+          fed_policy:
+            instruments: [DGS2, DGS10]
+          volatility:
+            instruments: [VIXCLS]
+
+  crypto:
+    default_weight: 0.10
+    buckets:
+      majors:
+        nodes:
+          btc:
+            instruments: [BTC]
+
+  commodities:
+    default_weight: 0.08
+    buckets:
+      energy:
+        nodes:
+          crude_oil:
+            instruments: [DCOILWTICO]
+
+  fx:
+    default_weight: 0.07
+    buckets: {}
+
+  derivatives:
+    buckets: {}

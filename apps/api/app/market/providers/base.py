@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal, Protocol
 
-from app.market.schemas import Candle, Event, NewsItem, Quote
+from app.market.schemas import Candle, Event, FinancialPeriod, NewsItem, PredictionMarket, Quote
 
 CallKind = Literal["quote", "candles", "news", "calendar"]
 
@@ -41,3 +41,25 @@ class Provider(Protocol):
     async def calendar(self, window: DateRange) -> list[Event]: ...
 
     def cost(self, call: CallSpec) -> int: ...
+
+
+class FundamentalsProvider(Protocol):
+    """Structured financial-statement data — not one of the four Router
+    capabilities (fundamentals doesn't fit quote/candles/news/calendar), so
+    it's its own small Protocol rather than growing `Provider`. Only
+    `SecEdgarProvider` implements this today (docs/DECISIONS.md
+    ADR-0021/0022).
+    """
+
+    async def fundamentals(
+        self, ticker: str, annual_limit: int = 5, quarterly_limit: int = 8
+    ) -> list[FinancialPeriod]: ...
+
+
+class ProbabilityProvider(Protocol):
+    """Market-implied odds — not one of the four Router capabilities either,
+    same rationale as `FundamentalsProvider`. Only `PolymarketProvider`
+    implements this today (docs/DECISIONS.md ADR-0024).
+    """
+
+    async def probability(self, limit: int = 12) -> list[PredictionMarket]: ...

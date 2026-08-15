@@ -1,0 +1,86 @@
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.tableBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tableTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.table thead th {
+  text-align: right;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.metricHeader {
+  min-width: 160px;
+}
+
+.groupRow th {
+  text-align: left;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-1) var(--space-3);
+}
+
+.metric {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.metricEmphasis {
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.value {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.valueEmphasis {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}

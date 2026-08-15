@@ -23,4 +23,4 @@ seed:
 	@echo "seed: not implemented yet (lands with the Market Data Gateway in phase 1)"
 
 simulate:
-	@echo "simulate PERSONA=$(PERSONA): not implemented yet (lands with the attention engine in phase 3)"
+	apps/api/.venv/bin/python scripts/simulate_user.py --persona $(PERSONA)

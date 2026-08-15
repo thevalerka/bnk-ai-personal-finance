@@ -22,3 +22,34 @@ hyperliquid:
 fred:
   capacity: 120
   window_seconds: 60
+
+# Keyless government sources — no published rate limit, so these are
+# self-imposed good-citizen caps (matching sources.yaml's declared
+# budgets), not a documented vendor tier like the others above.
+federal_reserve:
+  capacity: 60
+  window_seconds: 3600
+
+treasury:
+  capacity: 120
+  window_seconds: 60
+
+regional_feds:
+  capacity: 60
+  window_seconds: 3600
+
+# SEC asks for <=10 req/s; each news() call fans out to 10 companies
+# (one request each), issued sequentially, well under that ceiling.
+sec_edgar:
+  capacity: 60
+  window_seconds: 60
+
+rss_media:
+  capacity: 60
+  window_seconds: 3600
+
+# Matches sources.yaml's declared vendor budget. probability() fans out to
+# 3 requests per call (paginated), well under this.
+polymarket:
+  capacity: 120
+  window_seconds: 60

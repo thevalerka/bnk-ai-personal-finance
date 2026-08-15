@@ -11,6 +11,15 @@ ENV=development
 DATABASE_URL=postgresql://amt:amt@localhost:5433/amt
 REDIS_URL=redis://localhost:6380/0
 
+# --- Attention engine (phase 3) ---
+# Signs the anonymous profile_id cookie — generate a real random value for
+# any real deployment (e.g. `python3 -c "import secrets; print(secrets.token_hex(32))"`).
+# The insecure default in app/config.py is dev-only.
+SECRET_KEY=
+# The one frontend origin allowed to make credentialed /profile/* requests
+# (CORS). Defaults to http://localhost:3000 if unset.
+WEB_ORIGIN=
+
 # --- AI layer (phase 4) ---
 ANTHROPIC_API_KEY=
 

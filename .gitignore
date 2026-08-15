@@ -16,9 +16,12 @@ venv/
 .ruff_cache/
 *.egg-info/
 
-# Env (renamed from .env to .ratx — see docs/DECISIONS.md ADR-0010)
+# Env (renamed from .env to .ratx — see docs/DECISIONS.md ADR-0010).
+# *.ratx catches any secrets file using the convention regardless of prefix
+# (e.g. a provider-keys scratch file), not just the canonical `.ratx` name.
 .ratx
 .ratx.local
+*.ratx
 
 # OS
 .DS_Store

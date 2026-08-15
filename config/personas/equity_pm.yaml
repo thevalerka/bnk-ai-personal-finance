@@ -1,0 +1,16 @@
+# See config/personas/macro.yaml for the format/replay mechanism.
+name: equity_pm
+label: Equity PM
+description: Sector rotation and broad-market moves — index-first, benchmarked to SPY/QQQ.
+events:
+  - {node_id: equities.us_large_cap.broad_market, kind: search, days_ago: 6}
+  - {node_id: equities.us_large_cap.broad_market, kind: click, days_ago: 6}
+  - {node_id: equities.us_large_cap.technology, kind: click, days_ago: 5}
+  - {node_id: equities.us_large_cap.technology, kind: chart_interaction, days_ago: 4}
+  - {node_id: equities.us_large_cap.financials, kind: click, days_ago: 4}
+  - {node_id: equities.us_large_cap.healthcare, kind: hover, days_ago: 3}
+  - {node_id: equities.us_large_cap.energy_sector, kind: click, days_ago: 2}
+  - {node_id: equities.us_large_cap.broad_market, kind: pin, days_ago: 2}
+  - {node_id: equities.us_large_cap.technology, kind: click, days_ago: 1}
+  - {node_id: equities.us_large_cap.discretionary, kind: hover, days_ago: 1}
+  - {node_id: fixed_income.rates_ust.long_end, kind: impression, days_ago: 0}

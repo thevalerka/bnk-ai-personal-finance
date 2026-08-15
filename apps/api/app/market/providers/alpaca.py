@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -8,6 +8,21 @@ from app.market.schemas import Candle, Event, NewsItem, Quote
 BASE_URL = "https://data.alpaca.markets/v2"
 
 _TIMEFRAME_MAP = {"1m": "1Min", "5m": "5Min", "15m": "15Min", "1h": "1Hour", "1d": "1Day"}
+_MINUTES_PER_TF = {"1m": 1, "5m": 5, "15m": 15, "1h": 60}
+_TRADING_MINUTES_PER_DAY = 390  # NYSE 9:30-16:00 ET
+
+
+def _calendar_days_needed(tf: str, limit: int) -> int:
+    """Calendar-day span covering `limit` trading periods, padded for
+    weekends/holidays. Alpaca's /bars requires an explicit `start` — omit it
+    and this account gets back `"bars": null` rather than recent data."""
+    if tf == "1d":
+        trading_periods = limit
+    else:
+        minutes_per_bar = _MINUTES_PER_TF.get(tf, 1)
+        periods_per_day = max(1, _TRADING_MINUTES_PER_DAY // minutes_per_bar)
+        trading_periods = -(-limit // periods_per_day)  # ceil
+    return trading_periods * 2 + 10
 
 
 class AlpacaProvider:
@@ -39,10 +54,22 @@ class AlpacaProvider:
 
     async def candles(self, symbol: str, tf: str, limit: int) -> list[Candle]:
         timeframe = _TIMEFRAME_MAP.get(tf, tf)
+        end = datetime.now(tz=UTC)
+        start = end - timedelta(days=_calendar_days_needed(tf, limit))
         response = await self._get(
-            f"/stocks/{symbol}/bars", {"timeframe": timeframe, "limit": limit}
+            f"/stocks/{symbol}/bars",
+            {
+                "timeframe": timeframe,
+                "start": start.date().isoformat(),
+                "end": end.date().isoformat(),
+                "limit": limit + 30,
+                # Free-tier accounts get a 403 ("subscription does not permit
+                # querying recent SIP data") on the default feed for anything
+                # in roughly the last month; IEX is free-tier-accessible.
+                "feed": "iex",
+            },
         )
-        bars = response.json().get("bars", [])
+        bars = (response.json().get("bars") or [])[-limit:]
         return [
             Candle(
                 symbol=symbol,

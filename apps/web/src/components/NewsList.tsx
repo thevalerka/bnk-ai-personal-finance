@@ -2,6 +2,15 @@ import { fetchNews } from "@/lib/market";
 import { Unavailable } from "./Block";
 import styles from "./NewsList.module.css";
 
+// .source's CSS only capitalizes the first letter of the whole string
+// (text-transform: capitalize doesn't split on "_") — "federal_reserve"
+// rendered as "Federal_reserve" until this replaces underscores with
+// spaces first. Surfaced live while building the stock detail page, where
+// sec_edgar's underscore made the same pre-existing bug hard to miss.
+function formatSource(source: string): string {
+  return source.replace(/_/g, " ");
+}
+
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(diffMs / 60_000);
@@ -35,7 +44,7 @@ export async function NewsList() {
             </svg>
           </a>
           <div className={styles.meta}>
-            <span className={styles.source}>{item.source}</span>
+            <span className={styles.source}>{formatSource(item.source)}</span>
             <span>{relativeTime(item.ts)}</span>
           </div>
         </li>

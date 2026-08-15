@@ -1,12 +1,17 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { PanelControls } from "./PanelControls";
 import styles from "./Block.module.css";
 
 export function Block({
+  id,
   title,
   source,
   minHeight,
   children,
 }: {
+  id: string;
   title: string;
   source?: string;
   minHeight?: number;
@@ -16,7 +21,10 @@ export function Block({
     <section className={styles.block} style={{ minHeight }}>
       <header className={styles.header}>
         <h2 className={styles.title}>{title}</h2>
-        {source ? <span className={styles.sourceBadge}>{source}</span> : null}
+        <div className={styles.headerRight}>
+          {source ? <span className={styles.sourceBadge}>{source}</span> : null}
+          <PanelControls id={id} />
+        </div>
       </header>
       <div className={styles.body}>{children}</div>
     </section>

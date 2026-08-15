@@ -64,3 +64,7 @@
 .dotMacro {
   background: var(--series-2);
 }
+
+.dotAuction {
+  background: var(--neutral);
+}

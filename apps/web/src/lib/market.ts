@@ -36,6 +36,63 @@ export interface NewsItem {
   topics: string[];
 }
 
+export interface WorldIndexPoint {
+  iso_numeric: string;
+  name: string;
+  symbol: string;
+  quote: Quote | null;
+  currency: string | null;
+  fx_label: string | null;
+  bond_yield_pct: number | null;
+}
+
+export interface FinancialPeriod {
+  period_end: string;
+  fiscal_period: string;
+  form: string;
+  revenue: number | null;
+  cost_of_revenue: number | null;
+  gross_profit: number | null;
+  gross_margin_pct: number | null;
+  research_development: number | null;
+  sga_expense: number | null;
+  operating_expenses: number | null;
+  operating_income: number | null;
+  operating_margin_pct: number | null;
+  interest_expense: number | null;
+  income_tax_expense: number | null;
+  net_income: number | null;
+  net_margin_pct: number | null;
+  eps_diluted: number | null;
+  eps_basic: number | null;
+  operating_cash_flow: number | null;
+  capex: number | null;
+  free_cash_flow: number | null;
+  total_assets: number | null;
+  total_liabilities: number | null;
+  stockholders_equity: number | null;
+  cash_and_equivalents: number | null;
+  long_term_debt: number | null;
+}
+
+export interface StockDetail {
+  symbol: string;
+  quote: Quote | null;
+  candles: Candle[];
+  filings: NewsItem[];
+  news: NewsItem[];
+  financials: FinancialPeriod[];
+}
+
+export interface PredictionMarket {
+  question: string;
+  probability_pct: number;
+  volume_24h: number;
+  end_date: string | null;
+  url: string;
+  source: string;
+}
+
 export interface MarketEvent {
   ts: string;
   kind: string;
@@ -77,12 +134,25 @@ export function fetchCandles(
   return getJSON<Candle[]>(`/market/candles?${params}`, 60);
 }
 
-export function fetchNews(capability = "equity_news", sinceHours = 24): Promise<NewsItem[] | null> {
-  const params = new URLSearchParams({ capability, since_hours: String(sinceHours) });
+export function fetchNews(sinceHours = 24): Promise<NewsItem[] | null> {
+  const params = new URLSearchParams({ since_hours: String(sinceHours) });
   return getJSON<NewsItem[]>(`/market/news?${params}`, 300);
 }
 
 export function fetchCalendar(days = 14): Promise<MarketEvent[] | null> {
   const params = new URLSearchParams({ days: String(days) });
   return getJSON<MarketEvent[]>(`/market/calendar?${params}`, 3600);
+}
+
+export function fetchWorldIndices(): Promise<WorldIndexPoint[] | null> {
+  return getJSON<WorldIndexPoint[]>("/market/world", 60);
+}
+
+export function fetchStockDetail(symbol: string, days = 180): Promise<StockDetail | null> {
+  const params = new URLSearchParams({ days: String(days) });
+  return getJSON<StockDetail>(`/market/stock/${encodeURIComponent(symbol)}?${params}`, 60);
+}
+
+export function fetchPredictions(): Promise<PredictionMarket[] | null> {
+  return getJSON<PredictionMarket[]>("/market/predictions", 60);
 }

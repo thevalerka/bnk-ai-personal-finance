@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { ExplainPanelProvider } from "../ExplainPanel";
 import { YieldCurve } from "../YieldCurve";
 import { fetchQuote } from "@/lib/market";
 
@@ -18,7 +19,7 @@ describe("YieldCurve", () => {
       { symbol: "DGS30", price: 4.4, ts: "2026-01-01", change: null, change_percent: null, source: "fred" },
     ]);
 
-    const { container } = render(await YieldCurve());
+    const { container } = render(<ExplainPanelProvider>{await YieldCurve()}</ExplainPanelProvider>);
 
     expect(container.querySelectorAll("circle")).toHaveLength(3);
     expect(screen.getByText("4.40%")).toBeInTheDocument();

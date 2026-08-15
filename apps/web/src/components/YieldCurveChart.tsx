@@ -1,12 +1,33 @@
 "use client";
 
-import { useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useExplainPanel } from "./ExplainPanel";
+import { queueEvent } from "@/lib/eventQueue";
 import styles from "./YieldCurve.module.css";
 
 const WIDTH = 560;
 const HEIGHT = 160;
 const PAD_X = 24;
 const PAD_Y = 24;
+
+// Mirrors apps/api/config/taxonomy.yaml's fixed_income.rates_ust nodes —
+// no shared-types codegen yet (docs/STATE.md), same hand-maintained-parallel
+// convention as the other components' symbol lists.
+const SEGMENT_FOR_LABEL: Record<string, string> = {
+  "1M": "fixed_income.rates_ust.short_end",
+  "3M": "fixed_income.rates_ust.short_end",
+  "6M": "fixed_income.rates_ust.short_end",
+  "1Y": "fixed_income.rates_ust.short_end",
+  "2Y": "fixed_income.rates_ust.belly",
+  "3Y": "fixed_income.rates_ust.belly",
+  "5Y": "fixed_income.rates_ust.belly",
+  "7Y": "fixed_income.rates_ust.belly",
+  "10Y": "fixed_income.rates_ust.long_end",
+  "20Y": "fixed_income.rates_ust.long_end",
+  "30Y": "fixed_income.rates_ust.long_end",
+};
+
+const CHART_INTERACTION_THROTTLE_MS = 3000;
 
 interface TenorPoint {
   label: string;
@@ -26,6 +47,8 @@ interface Coord extends TenorPoint {
 // name every value without hovering).
 export function YieldCurveChart({ points }: { points: TenorPoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  const lastTracked = useRef<{ segment: string; at: number } | null>(null);
+  const { open: openExplain } = useExplainPanel();
 
   const { coords, path, areaPath, min, max } = useMemo(() => {
     const values = points.map((p) => p.value);
@@ -60,6 +83,14 @@ export function YieldCurveChart({ points }: { points: TenorPoint[] }) {
       }
     });
     setHover(nearest);
+
+    const segment = SEGMENT_FOR_LABEL[coords[nearest].label];
+    const now = Date.now();
+    const last = lastTracked.current;
+    if (segment && (!last || last.segment !== segment || now - last.at > CHART_INTERACTION_THROTTLE_MS)) {
+      lastTracked.current = { segment, at: now };
+      queueEvent({ node_id: segment, kind: "chart_interaction" });
+    }
   }
 
   const gridTicks = [0, 0.5, 1];
@@ -142,21 +173,30 @@ export function YieldCurveChart({ points }: { points: TenorPoint[] }) {
 
         {/* Wide invisible hit targets — the visible 3px dots stay thin, but
             hover/focus responds well before the pointer is dead-center. */}
-        {coords.map((c, i) => (
-          <rect
-            key={`hit-${c.label}`}
-            x={c.x - (WIDTH / coords.length) / 2}
-            y={0}
-            width={WIDTH / coords.length}
-            height={HEIGHT}
-            fill="transparent"
-            tabIndex={0}
-            role="graphics-symbol"
-            aria-label={`${c.label}: ${c.value.toFixed(2)}%`}
-            onFocus={() => setHover(i)}
-            onBlur={() => setHover(null)}
-          />
-        ))}
+        {coords.map((c, i) => {
+          const segment = SEGMENT_FOR_LABEL[c.label];
+          return (
+            <rect
+              key={`hit-${c.label}`}
+              x={c.x - (WIDTH / coords.length) / 2}
+              y={0}
+              width={WIDTH / coords.length}
+              height={HEIGHT}
+              fill="transparent"
+              tabIndex={0}
+              role="graphics-symbol"
+              aria-label={`${c.label}: ${c.value.toFixed(2)}%`}
+              style={segment ? { cursor: "pointer" } : undefined}
+              onFocus={() => setHover(i)}
+              onBlur={() => setHover(null)}
+              onClick={() => {
+                if (!segment) return;
+                queueEvent({ node_id: segment, kind: "click" });
+                openExplain(segment);
+              }}
+            />
+          );
+        })}
       </svg>
     </div>
   );

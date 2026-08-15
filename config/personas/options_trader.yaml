@@ -1,0 +1,23 @@
+# See config/personas/macro.yaml for the format/replay mechanism.
+#
+# Note (docs/DECISIONS.md ADR-0012): this persona's real center of gravity
+# is macro.cross_asset.volatility and the (currently empty) derivatives
+# asset class — neither is wired into any P3 dashboard block yet, so "View
+# as: Options Trader" won't visibly reshape the page as dramatically as
+# macro/equity_pm do. The vector itself is still real and inspectable via
+# /profile/vector and /profile/explain; it's the block-level rendering that
+# hasn't caught up to every taxonomy branch.
+name: options_trader
+label: Options Trader
+description: Volatility-centric, hedges with broad-market delta, watches short-end rates for carry.
+events:
+  - {node_id: macro.cross_asset.volatility, kind: search, days_ago: 6}
+  - {node_id: macro.cross_asset.volatility, kind: click, days_ago: 6}
+  - {node_id: equities.us_large_cap.broad_market, kind: click, days_ago: 5}
+  - {node_id: macro.cross_asset.volatility, kind: chart_interaction, days_ago: 4}
+  - {node_id: equities.us_large_cap.technology, kind: hover, days_ago: 3}
+  - {node_id: macro.cross_asset.volatility, kind: pin, days_ago: 2}
+  - {node_id: fixed_income.rates_ust.short_end, kind: click, days_ago: 2}
+  - {node_id: equities.us_large_cap.broad_market, kind: chart_interaction, days_ago: 1}
+  - {node_id: crypto.majors.btc, kind: hover, days_ago: 1}
+  - {node_id: macro.cross_asset.volatility, kind: click, days_ago: 0}

@@ -1,0 +1,74 @@
+.fxValue,
+.yieldValue {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.yieldNote {
+  font-size: 11px;
+  font-weight: 400;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  margin-left: var(--space-2);
+}
+
+.indexList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.indexRow,
+.indexRowActive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  margin: 0 calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.indexRowActive {
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+  padding-left: calc(var(--space-2) - 2px);
+}
+
+.indexRowActive .indexName {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.indexRow:last-child,
+.indexRowActive:last-child {
+  border-bottom: none;
+}
+
+.indexName {
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: color var(--transition-fast);
+}
+
+.indexName:hover {
+  color: var(--accent);
+}
+
+.indexRight {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.indexPrice {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}

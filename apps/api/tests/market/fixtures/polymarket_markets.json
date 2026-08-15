@@ -1,0 +1,39 @@
+[
+  {
+    "question": "Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?",
+    "slug": "will-the-fed-increase-interest-rates-by-50-bps-after-the-september-2026-meeting-664",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"0.0045\", \"0.9955\"]",
+    "volume24hr": 382746.58725,
+    "endDate": "2026-09-16T00:00:00Z",
+    "active": true,
+    "closed": false,
+    "events": [
+      { "id": "481717", "slug": "fed-decision-in-september-762", "title": "Fed Decision in September?" }
+    ]
+  },
+  {
+    "question": "Will there be no change in Fed interest rates after the September 2026 meeting?",
+    "slug": "will-there-be-no-change-in-fed-interest-rates-after-the-september-2026-meeting-615",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"0.755\", \"0.245\"]",
+    "volume24hr": 274164.30591500003,
+    "endDate": "2026-09-16T00:00:00Z",
+    "active": true,
+    "closed": false,
+    "events": [
+      { "id": "481717", "slug": "fed-decision-in-september-762", "title": "Fed Decision in September?" }
+    ]
+  },
+  {
+    "question": "PFK Dinamo Samarqand vs. Xorazm Fk Urganch: Xorazm Fk Urganch O/U 2.5",
+    "slug": "uzb1-din-xor-2026-08-14-team-total-away-2pt5",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"0.5\", \"0.5\"]",
+    "volume24hr": 999.98,
+    "endDate": "2026-08-14T00:00:00Z",
+    "active": true,
+    "closed": false,
+    "events": []
+  }
+]

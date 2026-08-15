@@ -47,6 +47,18 @@
   white-space: nowrap;
 }
 
+/* Equity items render as a <Link> (Tape.tsx) — reset anchor UA defaults so
+   it still reads as a plain tape entry, not a blue underlined link. */
+.itemLink {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.itemLink:hover .symbol {
+  color: var(--accent);
+}
+
 .symbol {
   color: var(--text-secondary);
   font-weight: 600;

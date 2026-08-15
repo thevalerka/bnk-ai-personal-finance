@@ -1,0 +1,15 @@
+# See config/personas/macro.yaml for the format/replay mechanism.
+name: crypto_native
+label: Crypto Native
+description: BTC-first, watches Fed policy and rates for liquidity conditions, light on equities.
+events:
+  - {node_id: crypto.majors.btc, kind: search, days_ago: 6}
+  - {node_id: crypto.majors.btc, kind: click, days_ago: 6}
+  - {node_id: crypto.majors.btc, kind: chart_interaction, days_ago: 5}
+  - {node_id: macro.cross_asset.fed_policy, kind: hover, days_ago: 4}
+  - {node_id: crypto.majors.btc, kind: pin, days_ago: 3}
+  - {node_id: macro.cross_asset.volatility, kind: hover, days_ago: 2}
+  - {node_id: fixed_income.rates_ust.short_end, kind: hover, days_ago: 2}
+  - {node_id: crypto.majors.btc, kind: click, days_ago: 1}
+  - {node_id: equities.us_large_cap.technology, kind: hover, days_ago: 1}
+  - {node_id: crypto.majors.btc, kind: click, days_ago: 0}

@@ -51,6 +51,67 @@ class NewsItem(BaseModel):
     topics: list[str] = []
 
 
+class WorldIndexPoint(BaseModel):
+    iso_numeric: str
+    name: str
+    symbol: str
+    quote: Quote | None = None
+    currency: str | None = None
+    fx_label: str | None = None
+    bond_yield_pct: float | None = None
+
+
+class FinancialPeriod(BaseModel):
+    period_end: date
+    fiscal_period: str  # "FY", "Q1", "Q2", "Q3"
+    form: str  # "10-K" or "10-Q"
+    # Income statement
+    revenue: float | None = None
+    cost_of_revenue: float | None = None
+    gross_profit: float | None = None
+    gross_margin_pct: float | None = None
+    research_development: float | None = None
+    sga_expense: float | None = None
+    operating_expenses: float | None = None
+    operating_income: float | None = None
+    operating_margin_pct: float | None = None
+    interest_expense: float | None = None
+    income_tax_expense: float | None = None
+    net_income: float | None = None
+    net_margin_pct: float | None = None
+    # Per share
+    eps_diluted: float | None = None
+    eps_basic: float | None = None
+    # Cash flow
+    operating_cash_flow: float | None = None
+    capex: float | None = None
+    free_cash_flow: float | None = None
+    # Balance sheet (point-in-time as of period_end, not a duration)
+    total_assets: float | None = None
+    total_liabilities: float | None = None
+    stockholders_equity: float | None = None
+    cash_and_equivalents: float | None = None
+    long_term_debt: float | None = None
+
+
+class StockDetail(BaseModel):
+    symbol: str
+    quote: Quote | None = None
+    candles: list[Candle] = []
+    filings: list[NewsItem] = []
+    news: list[NewsItem] = []
+    financials: list[FinancialPeriod] = []
+
+
+class PredictionMarket(BaseModel):
+    question: str
+    probability_pct: float
+    volume_24h: float
+    end_date: datetime | None = None
+    url: str
+    source: str = "polymarket"
+
+
 class Event(BaseModel):
     ts: datetime
     kind: str

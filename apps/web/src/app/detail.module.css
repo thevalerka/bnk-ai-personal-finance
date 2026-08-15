@@ -1,0 +1,83 @@
+/* Shared layout for detail pages (stock/[symbol], country/[iso]) — same
+   back-link/header/section chrome, kept in one place so the two routes
+   read as one consistent "drill-down" pattern rather than two designs. */
+
+.main {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.back {
+  color: var(--text-muted);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  transition: color var(--transition-fast);
+}
+
+.back:hover {
+  color: var(--accent);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.price {
+  font-size: 28px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.section {
+  background: var(--tile-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+}
+
+.sectionNote {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: var(--space-2) 0 0;
+}

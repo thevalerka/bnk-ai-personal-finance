@@ -9,6 +9,24 @@ jobs:
   api:
     name: api (ruff, mypy, pytest)
     runs-on: ubuntu-latest
+    services:
+      # Attention-engine tests (tests/attention/) hit a real Postgres rather
+      # than mocking SQL — docker-compose.yml runs the equivalent locally.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: amt
+          POSTGRES_PASSWORD: amt
+          POSTGRES_DB: amt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://amt:amt@localhost:5432/amt
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

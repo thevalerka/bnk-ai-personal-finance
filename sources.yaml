@@ -1,0 +1,611 @@
+# Adaptive Markets Terminal — source registry
+#
+# This file is the single source of truth for every external data source.
+# Adapters are thin: they read their entry from here for base_url, auth, budget,
+# TTL and headers. Adding a provider = adding a block here + one adapter class.
+#
+# `status` semantics:
+#   stable        — endpoint and free tier verified, safe to build on
+#   verify        — endpoint shape or free-tier limits MUST be confirmed before coding
+#                   (free tiers move constantly; do not assume, curl it first)
+#   experimental  — nice to have, may be dropped
+#
+# NOTE FOR CLAUDE CODE: run `python scripts/check_sources.py` before implementing
+# any adapter. Do not write an adapter for a source whose probe fails — open an
+# issue, mark it `status: dead`, and fall through to the declared fallback.
+
+version: 1
+
+defaults:
+  timeout_s: 10
+  retries: 2
+  backoff: exponential
+  # SEC and several government endpoints require a real contact string or they 403.
+  user_agent: "AdaptiveMarketsTerminal/0.1 (+https://terminal.example.com; thevalerka@gmail.com)"
+  budget_safety_factor: 0.8   # never spend more than 80% of a documented free tier
+  cache:
+    quote_ttl: 20s
+    candles_ttl: 60s
+    news_ttl: 300s
+    calendar_ttl: 3600s
+    fundamentals_ttl: 86400s
+    macro_series_ttl: 21600s
+    probability_ttl: 60s
+
+capabilities:
+  - quote          # last price / change / volume
+  - candles        # OHLCV time series
+  - curve          # yield curve points
+  - macro_series   # any FRED-style economic series
+  - news           # headlines with tickers/topics
+  - calendar       # scheduled forward-looking events
+  - filings        # regulatory documents
+  - fundamentals   # financial statements, ratios
+  - probability    # market-implied odds of a future outcome
+  - onchain        # wallet / RWA / perp state
+
+# ---------------------------------------------------------------------------
+# TIER 0 — PRIMARY SOURCES
+# Authoritative, free, effectively uncapped. The calendar comes from here.
+# ---------------------------------------------------------------------------
+
+sources:
+
+  fred:
+    tier: 0
+    status: stable
+    kind: rest
+    base_url: https://api.stlouisfed.org/fred
+    auth: { type: query_param, param: api_key, env: FRED_API_KEY }
+    budget: { limit: 120, window: 60s }
+    provides:
+      macro_series:
+        endpoint: /series/observations
+        ttl: 21600s
+        notes: "Backbone of the fixed-income view."
+      calendar:
+        endpoint: /releases/dates
+        params: { include_release_dates_with_no_data: true }
+        ttl: 3600s
+        event_kind: macro_event
+        notes: "Full forward schedule of every US statistical release. This is the macro calendar."
+    series_map:
+      # name: fred_series_id
+      ust_1m: DGS1MO
+      ust_3m: DGS3MO
+      ust_6m: DGS6MO
+      ust_1y: DGS1
+      ust_2y: DGS2
+      ust_5y: DGS5
+      ust_7y: DGS7
+      ust_10y: DGS10
+      ust_20y: DGS20
+      ust_30y: DGS30
+      spread_2s10s: T10Y2Y
+      spread_3m10y: T10Y3M
+      real_10y: DFII10
+      breakeven_10y: T10YIE
+      hy_oas: BAMLH0A0HYM2
+      ig_oas: BAMLC0A0CM
+      fed_funds_effective: DFF
+      sofr: SOFR
+      cpi_yoy: CPIAUCSL
+      core_pce: PCEPILFE
+      unemployment: UNRATE
+      wti: DCOILWTICO
+      dxy_broad: DTWEXBGS
+    curve_definition: [ust_1m, ust_3m, ust_6m, ust_1y, ust_2y, ust_5y, ust_7y, ust_10y, ust_20y, ust_30y]
+
+  federal_reserve:
+    tier: 0
+    status: stable
+    kind: rss
+    base_url: https://www.federalreserve.gov
+    auth: { type: none }
+    budget: { limit: 60, window: 3600s }
+    feeds:
+      press_monetary: { path: /feeds/press_monetary.xml, event_kind: policy_release, importance: 100 }
+      press_all:      { path: /feeds/press_all.xml,      event_kind: policy_release, importance: 60 }
+      speeches:       { path: /feeds/speeches.xml,       event_kind: speech,         importance: 70 }
+      testimony:      { path: /feeds/testimony.xml,      event_kind: speech,         importance: 70 }
+    static_calendar:
+      # FOMC dates are published years ahead. Seed them; do not scrape them weekly.
+      source: /monetarypolicy/fomccalendars.htm
+      refresh: quarterly
+      event_kind: fomc
+      importance: 100
+    notes: |
+      Covers "today FOMC" and Fed-speaker cards. Statement/minutes/SEP drops are the
+      highest-vol scheduled events in the calendar — importance 100, always surfaced
+      regardless of the user's interest vector.
+
+  regional_feds:
+    tier: 0
+    status: verify   # only atl confirmed live; see per-member notes below
+    kind: rss
+    auth: { type: none }
+    budget: { limit: 60, window: 3600s }
+    members:
+      # Probed live 2026-08-14 (docs/DECISIONS.md ADR-0018) — the declared
+      # URLs above were mostly stale/wrong even before implementation:
+      - { id: ny,   url: "https://www.newyorkfed.org/rss/feeds/speeches", status: dead, note: "404s; no working RSS discoverable anywhere on the site" }
+      - { id: sf,   url: "https://www.frbsf.org/feed/", status: dead, note: "200 but it's the general SF Fed blog (community/cash-ops/housing posts), not a speeches feed — no dedicated speech feed found" }
+      - { id: chi,  url: "https://www.chicagofed.org/forms/rss/Speeches", status: dead, note: "200 but stale and mislabeled — content is 2022-2023 CFNAI index releases, not speeches" }
+      - { id: atl,  url: "https://www.atlantafed.org/rss/speechindex", status: stable, note: "verified live, real current speeches (through Feb 2026) — this is the only member actually implemented" }
+      - { id: stl,  url: "https://www.stlouisfed.org/rss/speeches", status: dead, note: "301s to a 404 page; no working RSS discoverable anywhere on the site" }
+    event_kind: speech
+    importance: 55
+    notes: "Regional presidents move rates markets more than the calendar suggests. In practice only Atlanta Fed had a live, on-topic feed when probed — implemented as apps/api/app/market/providers/regional_feds.py with just that one member; revisit the other four if their sites change again."
+
+  bls:
+    tier: 0
+    status: verify
+    kind: rest
+    base_url: https://api.bls.gov/publicAPI/v2
+    auth: { type: query_param, param: registrationkey, env: BLS_API_KEY, optional: true }
+    budget: { limit: 500, window: 86400s }   # 25/day unregistered, 500/day registered
+    provides:
+      calendar:
+        # The machine-readable release schedule lives on the schedule page, not the API.
+        endpoint: https://www.bls.gov/schedule/news_release/
+        ttl: 86400s
+        event_kind: macro_event
+        importance: 90
+    notes: "CPI and NFP with exact 08:30 ET timestamps. Cross-check against FRED releases."
+
+  bea:
+    tier: 0
+    status: verify
+    kind: rest
+    base_url: https://apps.bea.gov/api/data
+    auth: { type: query_param, param: UserID, env: BEA_API_KEY }
+    budget: { limit: 100, window: 60s }
+    provides: { macro_series: { ttl: 21600s }, calendar: { ttl: 86400s, event_kind: macro_event, importance: 85 } }
+    notes: "GDP, PCE. Release schedule published as a separate page."
+
+  treasury_fiscaldata:
+    tier: 0
+    status: stable
+    kind: rest
+    base_url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+    auth: { type: none }
+    budget: { limit: 120, window: 60s }
+    provides:
+      curve:
+        endpoint: /v2/accounting/od/avg_interest_rates
+        ttl: 21600s
+      calendar:
+        endpoint: /v1/accounting/od/auctions_query
+        ttl: 3600s
+        event_kind: auction
+        importance: 65
+    notes: "Auction sizes and results. Essential for the fixed-income view, ignored by every retail dashboard."
+
+  sec_edgar:
+    tier: 0
+    status: stable
+    kind: rest
+    base_url: https://data.sec.gov
+    auth: { type: none }
+    required_headers:
+      User-Agent: "${defaults.user_agent}"   # SEC 403s without a real contact string
+    budget: { limit: 10, window: 1s }        # SEC asks for <=10 req/s; stay well under
+    provides:
+      filings:
+        endpoints:
+          submissions: /submissions/CIK{cik10}.json
+          company_facts: /api/xbrl/companyfacts/CIK{cik10}.json
+          full_text_search: https://efts.sec.gov/LATEST/search-index?q={q}
+        ttl: 900s
+        event_kind: filing
+      news:
+        endpoint: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=8-K&output=atom
+        ttl: 300s
+        importance: 75
+    notes: |
+      8-Ks are real-time material-event disclosure — the highest signal-to-noise
+      "news" source that exists, and it is free. Map form type -> importance:
+      8-K item 2.02 (results) 85, 5.02 (exec change) 70, 1.01 (material agreement) 60.
+
+      Implemented 2026-08-14 (docs/DECISIONS.md ADR-0019) as apps/api/app/market/
+      providers/sec_edgar.py, news() only, scoped to 10 tickers (AAPL, MSFT, NVDA,
+      AMZN, GOOGL, META, TSLA, AMD, PLTR, SOFI) — the equity universe this app
+      already tracks live elsewhere, not this file's full aspirational coverage.
+      CIKs resolved live via company_tickers.json. Live-verified: real 8-Ks parse
+      correctly with accurate item-code labels.
+
+  white_house:
+    tier: 0
+    status: dead   # probed live 2026-08-14, docs/DECISIONS.md ADR-0018
+    kind: rss
+    base_url: https://www.whitehouse.gov
+    auth: { type: none }
+    budget: { limit: 60, window: 3600s }
+    feeds:
+      briefings: { path: /briefing-room/feed/, event_kind: speech, importance: 60 }
+    notes: |
+      Covers the "X is going to speak at 14:00" card. Political speech scheduling is
+      genuinely unreliable as data — always render with a "scheduled, subject to change"
+      qualifier and never let the agent state it as a certainty.
+
+      Probed live 2026-08-14: no working feed exists anymore. /briefing-room/feed/
+      404s, /feed/ 404s, wp-json is 403'd, and no RSS/feed link is discoverable on
+      /remarks/, /presidential-actions/, or /news/ — RSS support appears to have
+      been fully removed in a site redesign. Not implemented; revisit if the site
+      exposes a feed (or an official API) again.
+
+  congress:
+    tier: 0
+    status: verify
+    kind: rest
+    base_url: https://api.congress.gov/v3
+    auth: { type: query_param, param: api_key, env: CONGRESS_API_KEY }
+    budget: { limit: 5000, window: 3600s }
+    provides: { calendar: { ttl: 21600s, event_kind: hearing, importance: 45 } }
+    notes: "Fed Chair testimony, Treasury hearings."
+
+  ecb:
+    tier: 0
+    status: verify
+    kind: rest
+    base_url: https://data-api.ecb.europa.eu/service/data
+    auth: { type: none }
+    budget: { limit: 60, window: 60s }
+    provides:
+      macro_series: { ttl: 21600s }
+      calendar: { endpoint: https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html, ttl: 86400s, event_kind: policy_release, importance: 95 }
+    notes: "Governing Council dates + euro area rates. Needed the moment a user's vector tilts European."
+
+  company_ir:
+    tier: 0
+    status: experimental
+    kind: rss
+    auth: { type: none }
+    budget: { limit: 300, window: 3600s }
+    event_kind: earnings
+    importance: 70
+    notes: |
+      Per-ticker IR RSS for the top ~100 names by user interest. Authoritative earnings
+      dates straight from the issuer. Populate feed URLs lazily as tickers enter the
+      covered universe; store in the `instruments` table, not here.
+
+# ---------------------------------------------------------------------------
+# TIER 1 — AGGREGATORS
+# Breadth and ticker tagging. Real free tiers, but they move — check `status`.
+# ---------------------------------------------------------------------------
+
+  finnhub:
+    tier: 1
+    status: stable
+    kind: rest
+    base_url: https://finnhub.io/api/v1
+    auth: { type: header, header: X-Finnhub-Token, env: FINNHUB_API_KEY }
+    budget: { limit: 60, window: 60s }
+    provides:
+      quote:    { endpoint: /quote, ttl: 20s }
+      candles:  { endpoint: /stock/candle, ttl: 60s }
+      news:     { endpoint: /company-news, ttl: 300s }
+      market_news: { endpoint: /news, params: { category: general }, ttl: 300s }
+      calendar: { endpoint: /calendar/earnings, ttl: 3600s, event_kind: earnings, importance: 70 }
+    known_limits:
+      economic_calendar: paid_only   # /calendar/economic has historically required a paid plan
+    notes: "Most generous free tier for quotes + news + earnings. Do NOT design the macro calendar around it."
+
+  alpaca:
+    tier: 1
+    status: stable
+    kind: rest
+    base_url: https://data.alpaca.markets/v2
+    trading_url: https://paper-api.alpaca.markets/v2
+    auth:
+      type: header
+      headers: { APCA-API-KEY-ID: ALPACA_KEY_ID, APCA-API-SECRET-KEY: ALPACA_SECRET }
+    budget: { limit: 200, window: 60s }
+    provides:
+      quote:    { endpoint: /stocks/quotes/latest, ttl: 5s, feed: iex }
+      candles:  { endpoint: /stocks/bars, ttl: 60s }
+      news:     { endpoint: https://data.alpaca.markets/v1beta1/news, ttl: 300s }
+      calendar: { endpoint: /calendar, ttl: 86400s, event_kind: market_session }
+    notes: "Free real-time IEX feed + paper trading. Also the paper-trading backend for P7."
+
+  alpha_vantage:
+    tier: 1
+    status: verify
+    kind: rest
+    base_url: https://www.alphavantage.co/query
+    auth: { type: query_param, param: apikey, env: ALPHAVANTAGE_API_KEY }
+    budget: { limit: 25, window: 86400s }   # free tier is very tight — research use only
+    provides:
+      news: { function: NEWS_SENTIMENT, ttl: 900s }
+      fundamentals: { function: OVERVIEW, ttl: 86400s }
+    mcp: { available: true, use: dev_only }
+    notes: |
+      Ticker-tagged sentiment over a wide universe, REST-polling only (no news websocket).
+      Free tier is too small for the request path — use for nightly enrichment, and wire
+      its MCP server into Claude Code for development convenience only.
+
+  marketaux:
+    tier: 1
+    status: verify
+    kind: rest
+    base_url: https://api.marketaux.com/v1
+    auth: { type: query_param, param: api_token, env: MARKETAUX_API_KEY }
+    budget: { limit: 100, window: 86400s }
+    provides:
+      news: { endpoint: /news/all, ttl: 300s }
+    notes: "Entity extraction is first-class and non-US coverage is the best of the free tier group."
+
+  fmp:
+    tier: 1
+    status: verify
+    kind: rest
+    base_url: https://financialmodelingprep.com/stable
+    auth: { type: query_param, param: apikey, env: FMP_API_KEY }
+    budget: { limit: 250, window: 86400s }
+    provides:
+      calendar: { endpoint: /earnings-calendar, ttl: 3600s, event_kind: earnings, importance: 70 }
+      economic_calendar: { endpoint: /economic-calendar, ttl: 3600s, event_kind: macro_event, importance: 80 }
+      fundamentals: { ttl: 86400s }
+    notes: "Fallback for the macro calendar when FRED release dates lack consensus figures."
+
+  benzinga_basic:
+    tier: 1
+    status: experimental
+    kind: rest
+    auth: { type: aws_marketplace, env: BENZINGA_KEY }
+    budget: { limit: 100, window: 86400s }
+    provides: { news: { ttl: 300s } }
+    licensing: "Free tier returns headline + teaser + link only. Must link back; never render full body."
+    notes: "Best-in-class analyst actions and upgrades/downgrades. Teaser-only is fine for a rail card."
+
+  gdelt:
+    tier: 1
+    status: verify
+    kind: rest
+    base_url: https://api.gdeltproject.org/api/v2/doc/doc
+    auth: { type: none }
+    budget: { limit: 30, window: 60s }
+    provides: { news: { ttl: 900s } }
+    notes: "Narrative/theme clustering, not tradeable headlines. Feeds the taxonomy topic tagger."
+
+  rss_media:
+    tier: 1
+    status: stable
+    kind: rss
+    auth: { type: none }
+    budget: { limit: 300, window: 3600s }
+    feeds:
+      - { id: cnbc_markets,    url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258" }
+      - { id: marketwatch_top, url: "https://feeds.content.dowjones.io/public/rss/mw_topstories" }
+      - { id: yahoo_ticker,    url: "https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US", per_symbol: true }
+    licensing: "Headline + link only. Never store or render full article bodies."
+    notes: |
+      Cheap breadth. Verify each feed with scripts/check_sources.py — media RSS URLs rot constantly.
+
+      Implemented 2026-08-14 (docs/DECISIONS.md ADR-0023) as apps/api/app/market/
+      providers/rss_media.py — cnbc_markets + marketwatch_top only, both verified
+      live. yahoo_ticker skipped: its per_symbol templating doesn't fit a flat
+      news() call with no symbol parameter (a stock-detail-page feature, not
+      wired there either yet).
+
+# ---------------------------------------------------------------------------
+# TIER 2 — EXPECTATIONS
+# What the market thinks will happen. This is the differentiator on the rail.
+# ---------------------------------------------------------------------------
+
+  polymarket:
+    tier: 2
+    status: stable
+    kind: rest+ws
+    base_url: https://clob.polymarket.com
+    gamma_url: https://gamma-api.polymarket.com
+    auth: { type: none }
+    budget: { limit: 120, window: 60s }
+    provides:
+      probability: { endpoint: /markets, ttl: 60s }
+    attach_to:
+      # Bind live odds to scheduled calendar events so a card reads
+      # "CPI Thursday — 68% priced for a sub-3% print"
+      - { event_kind: fomc,        match: "fed|rate|fomc" }
+      - { event_kind: macro_event, match: "cpi|inflation|jobs|payroll|gdp" }
+    notes: |
+      Existing in-house expertise. Highest-leverage source on this list for the suggestion rail.
+
+      Implemented 2026-08-14 (docs/DECISIONS.md ADR-0024) as apps/api/app/market/
+      providers/polymarket.py — probability() only, keyword-matched against real
+      markets rather than the attach_to binding above (no persistent events table
+      yet to bind onto, per ADR-0017). Checked live first: no per-company earnings
+      markets exist at real volume on Polymarket today, only Fed rate-decision and
+      S&P-direction markets — the attach_to fomc/macro_event categories above are
+      accurate, "earnings" was never a real category here.
+
+  kalshi:
+    tier: 2
+    status: verify
+    kind: rest
+    base_url: https://api.elections.kalshi.com/trade-api/v2
+    auth: { type: none, note: "public market data readable unauthenticated" }
+    budget: { limit: 60, window: 60s }
+    provides: { probability: { ttl: 60s } }
+    notes: "CFTC-regulated, cleaner macro coverage (CPI, Fed) than Polymarket in some months."
+
+# ---------------------------------------------------------------------------
+# CRYPTO / ONCHAIN
+# ---------------------------------------------------------------------------
+
+  binance_public:
+    tier: 1
+    status: stable
+    kind: rest+ws
+    base_url: https://api.binance.com/api/v3
+    ws_url: wss://stream.binance.com:9443/ws
+    auth: { type: none }
+    budget: { limit: 1200, window: 60s }
+    provides: { quote: { ttl: 5s }, candles: { ttl: 30s } }
+
+  hyperliquid:
+    tier: 1
+    status: stable
+    kind: rest+ws
+    base_url: https://api.hyperliquid.xyz/info
+    ws_url: wss://api.hyperliquid.xyz/ws
+    auth: { type: none }
+    budget: { limit: 600, window: 60s }
+    provides: { quote: { ttl: 5s }, candles: { ttl: 30s }, onchain: { ttl: 15s } }
+    notes: "HIP-3 equity/commodity perps and HyperCore spot. Needed for P6/P7 regardless."
+
+  pyth:
+    tier: 1
+    status: stable
+    kind: rest+sse
+    base_url: https://hermes.pyth.network
+    auth: { type: none }
+    budget: { limit: 300, window: 60s }
+    provides: { quote: { ttl: 5s } }
+    notes: "Oracle prices for RWA/tokenized equities on Solana."
+
+# ---------------------------------------------------------------------------
+# LAST RESORT
+# ---------------------------------------------------------------------------
+
+  scrape:
+    tier: 3
+    status: experimental
+    kind: scraper
+    enabled: false                # off by default; enable per-target explicitly
+    circuit_breaker: { failures: 3, cooldown: 3600s }
+    budget: { limit: 30, window: 3600s }
+    targets: []
+    notes: |
+      Isolated behind its own circuit breaker so a broken selector can never degrade
+      the app. Every scraped field must be marked `provenance: scraped` in the DB and
+      rendered with a visible low-confidence indicator.
+
+# ---------------------------------------------------------------------------
+# ROUTING — capability + scope -> ordered source chain
+# The Router walks `chain` in order, skipping any source over budget or circuit-broken.
+# `enrich` sources are merged into the primary result, not used as fallbacks.
+# ---------------------------------------------------------------------------
+
+routing:
+  calendar.macro.us:
+    chain: [fred, bls, bea, fmp]
+    enrich: [polymarket, kalshi]
+  calendar.macro.eu:
+    chain: [ecb, fmp]
+  calendar.policy:
+    chain: [federal_reserve, ecb]
+    enrich: [polymarket, kalshi]
+  calendar.speech:
+    chain: [federal_reserve, regional_feds, white_house, congress]
+  calendar.auction:
+    chain: [treasury_fiscaldata]
+  calendar.earnings:
+    chain: [finnhub, fmp, company_ir]
+  news.equities:
+    chain: [finnhub, marketaux, rss_media]
+    enrich: [sec_edgar, benzinga_basic]
+  news.macro:
+    chain: [federal_reserve, rss_media, marketaux]
+  news.crypto:
+    chain: [marketaux, rss_media]
+  quote.equities:
+    chain: [alpaca, finnhub]
+  quote.crypto:
+    chain: [binance_public, hyperliquid, pyth]
+  curve.us:
+    chain: [fred, treasury_fiscaldata]
+  macro_series:
+    chain: [fred, bea, ecb]
+  filings:
+    chain: [sec_edgar]
+  probability:
+    chain: [polymarket, kalshi]
+
+# ---------------------------------------------------------------------------
+# WORKER SCHEDULE (UTC cron). Ingestion is pull-based and cached; the web
+# request path NEVER triggers a vendor call that isn't already cached.
+# ---------------------------------------------------------------------------
+
+schedules:
+  calendar_refresh:   { cron: "0 */6 * * *",  routes: [calendar.macro.us, calendar.macro.eu, calendar.policy, calendar.auction] }
+  calendar_earnings:  { cron: "30 5 * * *",   routes: [calendar.earnings] }
+  speech_refresh:     { cron: "*/30 * * * *", routes: [calendar.speech] }
+  news_poll:          { cron: "*/5 * * * *",  routes: [news.equities, news.macro, news.crypto] }
+  filings_poll:       { cron: "*/2 * * * *",  routes: [filings] }
+  probability_poll:   { cron: "*/2 * * * *",  routes: [probability] }
+  curve_refresh:      { cron: "15 * * * *",   routes: [curve.us] }
+  fomc_seed:          { cron: "0 3 1 */3 *",  routes: [calendar.policy] }
+  briefing_generate:  { cron: "*/15 * * * *", task: build_event_pool_and_cluster_cards }
+  interest_compaction: { cron: "0 2 * * *",   task: fold_events_older_than_30d }
+
+# ---------------------------------------------------------------------------
+# EVENT IMPORTANCE — drives suggestion-rail ranking.
+# final = base_importance * class_weight * user_affinity * recency_gate
+# ---------------------------------------------------------------------------
+
+importance:
+  base:
+    fomc: 100
+    policy_release: 95
+    macro_event: 80
+    earnings: 70
+    filing: 65
+    auction: 60
+    speech: 55
+    hearing: 45
+    market_session: 20
+  always_surface:
+    # Shown to every user regardless of interest vector — these move everything.
+    - fomc
+    - { kind: macro_event, matches: ["CPI", "Nonfarm", "PCE", "FOMC", "GDP"] }
+  user_affinity:
+    formula: "0.5 + 0.5 * cosine(event_topics, user_interest_vector)"
+  recency_gate:
+    upcoming_within_24h: 1.3
+    upcoming_within_7d: 1.0
+    past_within_4h: 0.8
+    older: 0.0
+
+# ---------------------------------------------------------------------------
+# NORMALIZATION RULES — the four things that will break in production.
+# ---------------------------------------------------------------------------
+
+normalization:
+  timezone:
+    store: utc
+    source_default: America/New_York   # US releases are announced in ET, DST-shifting
+    render: user_local
+    rule: "Parse with zoneinfo against the source's declared tz. Never naive datetimes."
+  revisions:
+    strategy: versioned
+    rule: "Macro prints get revised. Insert a new row with revision_of=<event_id>; never UPDATE actual."
+  dedupe:
+    stages:
+      - canonical_url_hash        # strip utm_*, fbclid, trailing slash, then sha256
+      - title_trigram_similarity  # pg_trgm, threshold 0.75, within a 6h window
+      - entity_time_bucket        # same tickers + same 15min bucket + same event_kind
+    keep: highest_tier_source
+  provenance:
+    required: true
+    rule: "Every persisted row carries source_id, fetched_at, and provenance in {primary,aggregator,scraped}. The UI shows it. The agent cites it."
+
+# ---------------------------------------------------------------------------
+# LICENSING — check before shipping, record decisions in docs/DECISIONS.md
+# ---------------------------------------------------------------------------
+
+licensing:
+  rules:
+    - "Headline + teaser + link only for all aggregator and media news. Never store or render full article bodies."
+    - "Attribute and link every card back to its source. No sourceless cards ship."
+    - "Some free tiers forbid commercial use (e.g. API Ninjas). This site is a non-commercial portfolio; record that assumption explicitly per provider."
+    - "Government sources (FRED, SEC, BLS, BEA, Treasury) are public domain — prefer them wherever they cover the need."
+  per_source_commercial_use:
+    fred: allowed
+    sec_edgar: allowed
+    treasury_fiscaldata: allowed
+    finnhub: check
+    marketaux: check
+    alpha_vantage: check
+    benzinga_basic: attribution_required
+    rss_media: headline_and_link_only

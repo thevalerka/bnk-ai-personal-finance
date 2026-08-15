@@ -1,6 +1,7 @@
 import { fetchCandles, fetchQuote, type Candle, type Quote } from "@/lib/market";
-import { Sparkline } from "./Sparkline";
 import { Unavailable } from "./Block";
+import { QuoteTile } from "./QuoteTile";
+import { Sparkline } from "./Sparkline";
 import styles from "./QuoteGrid.module.css";
 
 export interface QuoteGroup {
@@ -9,11 +10,11 @@ export interface QuoteGroup {
   symbols: string[];
 }
 
-function formatPrice(price: number): string {
+export function formatPrice(price: number): string {
   return price >= 1000 ? price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : price.toFixed(2);
 }
 
-function DeltaLabel({ quote }: { quote: Quote }) {
+export function DeltaLabel({ quote }: { quote: Quote }) {
   const pct = quote.change_percent;
   if (pct === null || pct === undefined) {
     return <span className={`${styles.delta} ${styles.deltaFlat}`}>—</span>;
@@ -54,6 +55,10 @@ export async function QuoteGrid({ groups }: { groups: QuoteGroup[] }) {
     if (candles && candles.length > 0) candlesBySymbol.set(request.symbol, candles);
   });
 
+  const capabilityBySymbol = new Map<string, string>();
+  for (const group of groups) {
+    for (const symbol of group.symbols) capabilityBySymbol.set(symbol, group.capability);
+  }
   const symbols = groups.flatMap((g) => g.symbols);
 
   if (quotesBySymbol.size === 0) {
@@ -75,19 +80,27 @@ export async function QuoteGrid({ groups }: { groups: QuoteGroup[] }) {
         const candles = candlesBySymbol.get(symbol);
         const pct = quote.change_percent;
         const trend = pct === null || pct === undefined || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
-        return (
-          <div key={symbol} className={styles.tile}>
-            <div className={styles.tileTop}>
-              <span className={styles.symbol}>{symbol}</span>
-              <DeltaLabel quote={quote} />
-            </div>
-            <div className={styles.price}>{formatPrice(quote.price)}</div>
-            {candles ? (
-              <div className={styles.sparklineRow}>
-                <Sparkline candles={candles} width={140} height={32} trend={trend} />
+        // Only equities have a stock detail page (history + SEC filings) —
+        // crypto/macro-series tiles (BTC, VIX, 2Y, ...) stay a plain,
+        // non-clickable tile rather than link to a nonsensical stock page.
+        if (capabilityBySymbol.get(symbol) !== "equity_quote") {
+          return (
+            <div key={symbol} className={styles.tile}>
+              <div className={styles.tileTop}>
+                <span className={styles.symbol}>{symbol}</span>
+                <DeltaLabel quote={quote} />
               </div>
-            ) : null}
-          </div>
+              <div className={styles.price}>{formatPrice(quote.price)}</div>
+              {candles ? (
+                <div className={styles.sparklineRow}>
+                  <Sparkline candles={candles} width={140} height={32} trend={trend} />
+                </div>
+              ) : null}
+            </div>
+          );
+        }
+        return (
+          <QuoteTile key={symbol} symbol={symbol} quote={quote} candles={candles} trend={trend} />
         );
       })}
     </div>

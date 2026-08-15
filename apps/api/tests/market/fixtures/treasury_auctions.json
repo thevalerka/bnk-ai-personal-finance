@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "security_type": "Bill",
+      "security_term": "26-Week",
+      "auction_date": "2026-08-17",
+      "cusip": "912797TV9"
+    },
+    {
+      "security_type": "Bond",
+      "security_term": "20-Year",
+      "auction_date": "2026-08-19",
+      "cusip": "912810UX4"
+    }
+  ],
+  "meta": { "count": 2 }
+}

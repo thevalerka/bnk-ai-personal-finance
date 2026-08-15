@@ -1,9 +1,11 @@
+import { PersonaSwitcher } from "./PersonaSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
+import { PanelRestoreTray } from "./PanelRestoreTray";
 import styles from "./Shell.module.css";
 
-// Prompt bar is intentionally non-functional in P2 — the agent loop that
-// answers it lands in phase 4 (docs/PLAN.md P4). Persona switcher is a
-// static label for the same reason: it needs the interest-vector model
-// from phase 3 (attention engine) before it can do anything.
+// Prompt bar is still non-functional — the agent loop that answers it
+// lands in phase 4 (docs/PLAN.md P4). Persona switcher is real as of phase
+// 3 (see PersonaSwitcher.tsx / apps/api's /profile/persona).
 export function Shell() {
   return (
     <header className={styles.header}>
@@ -37,7 +39,9 @@ export function Shell() {
           disabled
         />
       </div>
-      <div className={styles.persona}>View as: Default</div>
+      <PanelRestoreTray />
+      <ThemeToggle />
+      <PersonaSwitcher />
     </header>
   );
 }
