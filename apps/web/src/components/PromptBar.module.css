@@ -1,0 +1,150 @@
+.wrapper {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.promptBar {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.promptIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.promptInput {
+  width: 100%;
+  background: var(--panel-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3) var(--space-2) 34px;
+  color: var(--text-primary);
+  font-size: 13px;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.promptInput::placeholder {
+  color: var(--text-muted);
+}
+
+.promptInput:hover {
+  border-color: var(--baseline);
+  background: var(--surface-2);
+}
+
+.promptInput:disabled {
+  opacity: 0.7;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation-3, 0 12px 32px rgba(0, 0, 0, 0.25));
+  z-index: 30;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.panelActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.panelButton {
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.panelButton:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.messages {
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.userTurn {
+  align-self: flex-end;
+  max-width: 80%;
+}
+
+.assistantTurn {
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.turnText {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.userTurn .turnText {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.errorText {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--negative);
+}
+
+.sources {
+  margin-top: var(--space-1);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.chartWrap {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: var(--surface-1);
+}
+
+.chartTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}

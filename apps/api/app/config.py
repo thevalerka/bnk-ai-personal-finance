@@ -15,6 +15,21 @@ class Settings(BaseSettings):
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""
 
+    # Phase 4 — Agent (docs/PLAN.md section 5). Sonnet for the interactive
+    # prompt-bar path per the plan's own model choice (latency over Opus's
+    # extra reasoning depth for a chat-speed tool-use loop).
+    anthropic_api_key: str = ""
+    agent_model: str = "claude-sonnet-5"
+    # Hard cost ceiling (plan section 5.3) — a rough token count, not a
+    # dollar figure, so it doesn't need updating every time list pricing
+    # changes. Degrades to a 503 rather than an unbounded vendor bill once
+    # exceeded for the remainder of the calendar month.
+    agent_monthly_token_budget: int = 2_000_000
+    # Public-site abuse surface (plan section 5.3): the prompt bar is the
+    # one endpoint on this API a visitor can make it call an LLM from,
+    # repeatedly, for free.
+    agent_rate_limit_per_minute: int = 10
+
     # Signs the anonymous profile_id cookie (docs/PLAN.md section 4.1) so a
     # client can't forge someone else's profile. Dev-only default — real
     # deployments must set a random value in .ratx.

@@ -14,12 +14,12 @@ describe("Shell", () => {
     expect(screen.getByRole("heading", { name: /adaptive markets terminal/i })).toBeInTheDocument();
   });
 
-  it("renders the prompt bar disabled, per P2's non-functional scope", () => {
+  it("renders the prompt bar enabled, now that phase 4's agent backs it", () => {
     render(
       <PanelPrefsProvider>
         <Shell />
       </PanelPrefsProvider>,
     );
-    expect(screen.getByRole("textbox", { name: /ask the terminal/i })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: /ask the terminal/i })).toBeEnabled();
   });
 });

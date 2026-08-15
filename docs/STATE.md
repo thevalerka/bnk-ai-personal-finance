@@ -5,6 +5,82 @@ Newest entry first.
 
 ---
 
+## 2026-08-15 — Phase 4: Agent (tool-use loop, prompt bar, dashboard mutation) — built, tested, not yet live-verified
+
+Full phase per `docs/PLAN.md` section 5/7 (P4). Full detail in
+`docs/DECISIONS.md` ADR-0027. No `ANTHROPIC_API_KEY` exists anywhere in this
+deployment — checked `.ratx`, the environment, `ant auth status` (not
+installed). Considered reusing this session's own Claude Code login;
+that's a personal subscription credential scoped to this CLI session, not
+a portable API key, and wiring it into a public production service would
+be the wrong mechanism (and likely against its terms). User chose to build
+the full phase now with mocked tests and defer live verification/
+deployment until a real Console key is added.
+
+**Backend** (`apps/api/app/agent/`, new): 13 tools wrapping the existing
+Gateway/Router/attention-engine calls directly — no new vendor code
+anywhere. `service.py`'s manual tool-use loop (Sonnet 5, per the plan's own
+model choice) streams a custom SSE contract (text/tool_call/tool_result/
+chart/mutation/done/error) rather than using the SDK's `tool_runner`, since
+this needs side effects (chart specs, dashboard-mutation flags) the runner
+has nowhere to carry. `add_block`/`set_focus` both resolve to the same real
+lever — a `PIN`-weight event on the attention engine — since that's the
+only mutation primitive that exists; `add_block`'s result is honest about
+whether the target node is one of the 3 blocks that actually resize today.
+Cost control (plan 5.3): a monthly Redis token counter + per-profile
+requests/minute limiter, checked before spending anything on a turn.
+
+**Found and fixed a real bug via an API-level test, not a screenshot**:
+`POST /agent/stream` must return its own `StreamingResponse` (SSE
+requires it), and FastAPI silently discards the injected `Response`
+dependency's mutations whenever a handler does that — so `resolve_profile`'s
+cookie-setting was happening from inside the async generator backing the
+stream, which only starts running *after* Starlette has already sent the
+response headers to the client. First-time visitors would never have
+gotten the `amt_profile` cookie from this endpoint. Fixed by resolving the
+profile before constructing/returning the response.
+
+**Frontend:** `lib/agent.ts` hand-parses SSE off a streamed `fetch`
+(`EventSource` can't do a credentialed POST with a JSON body).
+`PromptBar.tsx` replaces the P2-era disabled input in `Shell.tsx` — a
+dropdown panel with the streaming answer, a "via get_quotes, ..." source
+footer, and an inline `PriceHistoryChart` (reused as-is) when the agent
+calls `render_chart`. A `mutation` SSE event dispatches a `window` custom
+event `DynamicGrid.tsx` listens for, refetching `/profile/layout`
+immediately instead of waiting out its normal 30s poll — the plan's literal
+"the page rebuilds itself" demo moment.
+
+**Verified locally:** `make test` (181 api, up from 143 — +38 agent tests;
+1 worker; 67 web, up from 60 — +7 `PromptBar.test.tsx`) / `make lint` /
+`make typecheck` / `next build` all green. Real, unmocked browser check
+(local dev instances, not the live site): prompt bar renders enabled,
+submitting opens the panel and shows the user's turn, and — with no key
+configured anywhere — a failed request degrades to a plain "Could not
+reach the agent." message, zero console/React errors, no crash, no
+fabricated answer.
+
+**Not done / deliberately deferred:**
+
+- **Live verification against the real Anthropic API** — the DoD's "ten
+  canned questions answered with sourced figures, zero fabricated numbers"
+  needs a real model in the loop; every test mocks the Anthropic client and
+  exercises the loop's correctness, not the model's actual answers. Revisit
+  once a Console key is added — see ADR-0027 for exactly what's needed.
+- **Deploy** — `amt-api`/`amt-web` weren't rebuilt/restarted; the live site
+  is unchanged this session. `/agent/stream` already 503s cleanly with no
+  key configured either way.
+- Cheaper-tier classification model (plan 5.1) — no classification feature
+  exists yet to need it.
+- Token spend surfaced on `/architecture` (plan 5.3, P8 scope) — tracked in
+  Redis but not displayed anywhere yet.
+
+**Next:** add a real `ANTHROPIC_API_KEY` to `apps/api/.ratx`, then live-
+verify against the DoD (ten canned questions, refusal behavior, dashboard
+mutation) and deploy. After that: Phase 5 — Suggestion rail
+(`docs/PLAN.md` section 7, P5).
+
+---
+
 ## 2026-08-15 — Real Polymarket earnings calendar (first row), World Map shrunk further
 
 Follow-up in the same session as the housekeeping commit below. User pointed

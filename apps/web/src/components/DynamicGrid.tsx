@@ -114,9 +114,16 @@ export function DynamicGrid({
     }
     void poll();
     const interval = setInterval(poll, POLL_INTERVAL_MS);
+    // PromptBar dispatches this the moment an add_block/set_focus tool call
+    // mutates the profile (docs/PLAN.md section 5.1's "the page rebuilds
+    // itself" demo moment) — an immediate refetch instead of waiting out
+    // the normal 30s interval above.
+    const onMutation = () => void poll();
+    window.addEventListener("amt:layout-refresh", onMutation);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener("amt:layout-refresh", onMutation);
     };
   }, []);
 

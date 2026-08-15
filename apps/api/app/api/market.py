@@ -245,10 +245,7 @@ def _fx_label(country: WorldCountrySpec, fx_quotes: dict[str, Quote]) -> str | N
     return f"$1 = {quote.price:,.2f} {country.currency}"
 
 
-@router.get("/world")
-async def get_world_indices(request: Request) -> list[WorldIndexPoint]:
-    market_router = _router(request)
-
+async def _world_indices(market_router: Router) -> list[WorldIndexPoint]:
     etf_symbols = [c.etf_symbol for c in WORLD_COUNTRIES]
     try:
         etf_quotes = await market_router.quote("equity_quote", etf_symbols)
@@ -294,6 +291,11 @@ async def get_world_indices(request: Request) -> list[WorldIndexPoint]:
         )
         for c in WORLD_COUNTRIES
     ]
+
+
+@router.get("/world")
+async def get_world_indices(request: Request) -> list[WorldIndexPoint]:
+    return await _world_indices(_router(request))
 
 
 @router.get("/quote")

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 _TAXONOMY = load_taxonomy()
 
 
-def _set_profile_cookie(response: Response, profile_id: uuid.UUID) -> None:
+def set_profile_cookie(response: Response, profile_id: uuid.UUID) -> None:
     settings = get_settings()
     response.set_cookie(
         identity.COOKIE_NAME,
@@ -31,9 +31,11 @@ def _set_profile_cookie(response: Response, profile_id: uuid.UUID) -> None:
     )
 
 
-async def _resolve_profile(request: Request, response: Response) -> uuid.UUID:
+async def resolve_profile(request: Request, response: Response) -> uuid.UUID:
     """Read the signed profile_id cookie, or mint and persist a new one on
-    first visit (docs/PLAN.md section 4.1)."""
+    first visit (docs/PLAN.md section 4.1). Public — also used by
+    app.api.agent, which needs the same identity to attribute set_focus/
+    add_block tool calls to the visitor's real interest vector."""
     settings = get_settings()
     raw_cookie = request.cookies.get(identity.COOKIE_NAME)
     profile_id = identity.verify(raw_cookie, settings.secret_key) if raw_cookie else None
@@ -46,7 +48,7 @@ async def _resolve_profile(request: Request, response: Response) -> uuid.UUID:
         await service.ensure_profile(conn, profile_id)
 
     if is_new:
-        _set_profile_cookie(response, profile_id)
+        set_profile_cookie(response, profile_id)
     return profile_id
 
 
@@ -63,7 +65,7 @@ class EventsIn(BaseModel):
 
 @router.post("/events", status_code=204)
 async def post_events(request: Request, response: Response, body: EventsIn) -> None:
-    profile_id = await _resolve_profile(request, response)
+    profile_id = await resolve_profile(request, response)
     pool = request.app.state.db_pool
     async with pool.acquire() as conn:
         for event in body.events:
@@ -83,7 +85,7 @@ async def post_events(request: Request, response: Response, body: EventsIn) -> N
 
 @router.get("/vector")
 async def get_vector(request: Request, response: Response) -> dict[str, float]:
-    profile_id = await _resolve_profile(request, response)
+    profile_id = await resolve_profile(request, response)
     pool = request.app.state.db_pool
     async with pool.acquire() as conn:
         return await service.get_scores(conn, profile_id)
@@ -91,7 +93,7 @@ async def get_vector(request: Request, response: Response) -> dict[str, float]:
 
 @router.get("/layout")
 async def get_layout(request: Request, response: Response) -> LayoutPlan:
-    profile_id = await _resolve_profile(request, response)
+    profile_id = await resolve_profile(request, response)
     pool = request.app.state.db_pool
     async with pool.acquire() as conn:
         return await service.get_layout(conn, profile_id)
@@ -106,7 +108,7 @@ _VALID_DAG_IDS = (
 async def get_explain(request: Request, response: Response, node_id: str) -> ExplainResult:
     if node_id not in _VALID_DAG_IDS:
         raise HTTPException(status_code=404, detail=f"unknown taxonomy node: {node_id}")
-    profile_id = await _resolve_profile(request, response)
+    profile_id = await resolve_profile(request, response)
     pool = request.app.state.db_pool
     async with pool.acquire() as conn:
         return await service.explain(conn, profile_id, node_id)
@@ -126,7 +128,7 @@ class ProfileOut(BaseModel):
 
 @router.get("/me")
 async def get_me(request: Request, response: Response) -> ProfileOut:
-    profile_id = await _resolve_profile(request, response)
+    profile_id = await resolve_profile(request, response)
     pool = request.app.state.db_pool
     async with pool.acquire() as conn:
         persona = await conn.fetchval("SELECT persona FROM profiles WHERE id = $1", profile_id)
@@ -157,7 +159,7 @@ async def post_persona(request: Request, response: Response, name: str) -> Profi
         await replay_persona(conn, _TAXONOMY, profile_id, persona)
         layout = await service.get_layout(conn, profile_id)
 
-    _set_profile_cookie(response, profile_id)
+    set_profile_cookie(response, profile_id)
     return ProfileOut(profile_id=profile_id, persona=persona.name, layout=layout)
 
 
@@ -170,5 +172,5 @@ async def post_reset(request: Request, response: Response) -> ProfileOut:
         await service.ensure_profile(conn, profile_id)
         layout = await service.get_layout(conn, profile_id)
 
-    _set_profile_cookie(response, profile_id)
+    set_profile_cookie(response, profile_id)
     return ProfileOut(profile_id=profile_id, persona=None, layout=layout)
