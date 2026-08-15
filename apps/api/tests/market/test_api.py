@@ -394,3 +394,27 @@ def test_predictions_endpoint_returns_503_when_unreachable(redis: Redis) -> None
         response = client.get("/market/predictions")
 
         assert response.status_code == 503
+
+
+def test_earnings_calendar_endpoint_returns_per_company_markets(redis: Redis) -> None:
+    with TestClient(app) as client:
+        _install_fake_gateway(redis, {"polymarket": FakeProvider("polymarket")})
+
+        response = client.get("/market/earnings-calendar")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body[0]["source"] == "polymarket"
+        assert body[0]["ticker"] == "TEST"
+        assert body[0]["eps_estimate"] == "$1.00"
+
+
+def test_earnings_calendar_endpoint_returns_503_when_unreachable(redis: Redis) -> None:
+    with TestClient(app) as client:
+        _install_fake_gateway(
+            redis, {"polymarket": FakeProvider("polymarket", error=ProviderError("down"))}
+        )
+
+        response = client.get("/market/earnings-calendar")
+
+        assert response.status_code == 503

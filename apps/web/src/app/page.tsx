@@ -12,6 +12,7 @@ import { EconomicCalendar } from "@/components/EconomicCalendar";
 import { WorldMap } from "@/components/WorldMap";
 import { Forex } from "@/components/Forex";
 import { PredictionMarkets } from "@/components/PredictionMarkets";
+import { EarningsCalendar } from "@/components/EarningsCalendar";
 import styles from "./page.module.css";
 
 const TAPE_GROUPS: QuoteGroup[] = [
@@ -40,6 +41,18 @@ export default function Home() {
       </Suspense>
 
       <div className={styles.dashboard}>
+        <PanelSlot
+          id="earnings_calendar"
+          title="Earnings Calendar"
+          spanClassName={styles.earningsCalendar}
+        >
+          <Suspense fallback={<BlockSkeleton title="Earnings Calendar" minHeight={420} />}>
+            <Block id="earnings_calendar" title="Earnings Calendar" source="Polymarket">
+              <EarningsCalendar />
+            </Block>
+          </Suspense>
+        </PanelSlot>
+
         <PanelSlot id="world_map" title="World Indices" spanClassName={styles.worldMap}>
           <Suspense fallback={<BlockSkeleton title="World Indices" minHeight={420} />}>
             <Block id="world_map" title="World Indices" source="country ETF proxies">

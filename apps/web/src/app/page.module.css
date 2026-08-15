@@ -37,11 +37,18 @@
   align-self: start;
 }
 
-/* Max 50% of the page on desktop (user request) — 100% below that, since
-   the map is the thing most worth full-width real estate on a narrow
-   screen, not the thing to keep small. */
+/* Shares the first row with the Earnings Calendar now (user request) —
+   further reduced from the earlier 50% (span 6) to make room. 100% below
+   desktop still, since the map is the thing most worth full-width real
+   estate on a narrow screen, not the thing to keep small. */
 .worldMap {
-  grid-column: span 6;
+  grid-column: span 5;
+}
+
+/* First thing on the page (user request) — takes the larger share of the
+   first row, World Map takes the rest. */
+.earningsCalendar {
+  grid-column: span 7;
 }
 
 /* Forex + Prediction Markets share a row — 7 currency-pair tiles want more
@@ -74,7 +81,8 @@
   .mostTraded {
     grid-column: span 6;
   }
-  .worldMap {
+  .worldMap,
+  .earningsCalendar {
     grid-column: span 6;
   }
   .forex,
@@ -94,6 +102,7 @@
   .calendar,
   .mostTraded,
   .worldMap,
+  .earningsCalendar,
   .forex,
   .predictions {
     grid-column: span 1;

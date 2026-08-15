@@ -10,7 +10,15 @@ from fakeredis import FakeAsyncRedis
 from redis.asyncio import Redis
 
 from app.market.providers.base import CallSpec, DateRange, ProviderError
-from app.market.schemas import Candle, Event, FinancialPeriod, NewsItem, PredictionMarket, Quote
+from app.market.schemas import (
+    Candle,
+    EarningsMarket,
+    Event,
+    FinancialPeriod,
+    NewsItem,
+    PredictionMarket,
+    Quote,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -114,6 +122,22 @@ class FakeProvider:
                 probability_pct=75.5,
                 volume_24h=100000.0,
                 url="https://polymarket.com/event/test",
+            )
+        ]
+
+    async def earnings_calendar(self, limit: int = 100) -> list[EarningsMarket]:
+        self.calls += 1
+        if self._error is not None:
+            raise self._error
+        return [
+            EarningsMarket(
+                ticker="TEST",
+                company="Test Co",
+                eps_estimate="$1.00",
+                probability_pct=60.0,
+                volume=5000.0,
+                report_date=datetime.now(tz=UTC),
+                url="https://polymarket.com/event/test-earnings",
             )
         ]
 

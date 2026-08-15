@@ -403,6 +403,7 @@ sources:
     budget: { limit: 120, window: 60s }
     provides:
       probability: { endpoint: /markets, ttl: 60s }
+      earnings_calendar: { endpoint: /events?tag_slug=earnings, ttl: 300s }
     attach_to:
       # Bind live odds to scheduled calendar events so a card reads
       # "CPI Thursday — 68% priced for a sub-3% print"
@@ -412,12 +413,15 @@ sources:
       Existing in-house expertise. Highest-leverage source on this list for the suggestion rail.
 
       Implemented 2026-08-14 (docs/DECISIONS.md ADR-0024) as apps/api/app/market/
-      providers/polymarket.py — probability() only, keyword-matched against real
-      markets rather than the attach_to binding above (no persistent events table
-      yet to bind onto, per ADR-0017). Checked live first: no per-company earnings
-      markets exist at real volume on Polymarket today, only Fed rate-decision and
-      S&P-direction markets — the attach_to fomc/macro_event categories above are
-      accurate, "earnings" was never a real category here.
+      providers/polymarket.py — probability() only, keyword-matched against the
+      top-volume-ranked /markets feed, real Fed rate-decision and S&P-direction
+      markets. That pass concluded no per-company earnings markets exist on
+      Polymarket at real volume — **wrong, corrected 2026-08-15 (ADR-0026)**:
+      they exist on a separate low-per-market-volume feed
+      (/events?tag_slug=earnings, ~40 live "beat consensus EPS" markets, one per
+      company) that a volume-ranked top-N scan can never surface regardless of N.
+      earnings_calendar() now covers this feed directly. The attach_to
+      fomc/macro_event categories above remain accurate for probability()'s feed.
 
   kalshi:
     tier: 2

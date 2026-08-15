@@ -93,6 +93,17 @@ export interface PredictionMarket {
   source: string;
 }
 
+export interface EarningsMarket {
+  ticker: string;
+  company: string;
+  eps_estimate: string | null;
+  probability_pct: number;
+  volume: number;
+  report_date: string | null;
+  url: string;
+  source: string;
+}
+
 export interface MarketEvent {
   ts: string;
   kind: string;
@@ -155,4 +166,8 @@ export function fetchStockDetail(symbol: string, days = 180): Promise<StockDetai
 
 export function fetchPredictions(): Promise<PredictionMarket[] | null> {
   return getJSON<PredictionMarket[]>("/market/predictions", 60);
+}
+
+export function fetchEarningsCalendar(): Promise<EarningsMarket[] | null> {
+  return getJSON<EarningsMarket[]>("/market/earnings-calendar", 300);
 }

@@ -21,6 +21,13 @@ export const PANEL_REGISTRY: { id: string; title: string }[] = [
   { id: "calendar", title: "Calendar" },
   { id: "most_traded", title: "Most Traded" },
   { id: "world_map", title: "World Indices" },
+  // forex/predictions were missing from this registry even though both
+  // already render inside a PanelSlot — found while adding
+  // earnings_calendar below: deleting either one made it vanish with no
+  // way to restore it, since useDeletedPanels() filters against this list.
+  { id: "forex", title: "Forex" },
+  { id: "predictions", title: "Prediction Markets" },
+  { id: "earnings_calendar", title: "Earnings Calendar" },
 ];
 
 interface PanelPrefsContextValue {

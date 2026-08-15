@@ -5,6 +5,65 @@ Newest entry first.
 
 ---
 
+## 2026-08-15 — Real Polymarket earnings calendar (first row), World Map shrunk further
+
+Follow-up in the same session as the housekeeping commit below. User pointed
+directly at `polymarket.com/earnings`, contradicting ADR-0024's "no
+per-company earnings markets" finding from the day before. Full detail in
+`docs/DECISIONS.md` ADR-0026 — short version: that finding was real for the
+feed it checked (`/markets`, ranked by 24h volume), but per-company earnings
+markets exist on a completely separate feed (`/events?tag_slug=earnings`)
+that a volume-ranked scan can never reach, since each individual earnings
+market runs a few hundred to a few thousand dollars of volume, not millions.
+
+**Backend:** `PolymarketProvider.earnings_calendar()` (new method) — ~41
+live "beat consensus EPS" markets, one page, parses ticker/company from the
+question text and the EPS estimate from the market description (no
+structured field for it). New `EarningsMarket` schema, `GET
+/market/earnings-calendar`, sharing `probability()`'s cache/budget-bypass
+plumbing and Polymarket token bucket. **Found and fixed a real bug before
+shipping**, only visible against live data: this feed returns `volume` as a
+numeric *string*, unlike `probability()`'s float `volume24hr` — the
+copy-pasted `isinstance(..., int | float)` guard would have silently
+zeroed every volume.
+
+**Frontend:** new `EarningsCalendar.tsx`, grouped by report date like the
+real page. Placed first on the homepage per the user's request, sharing the
+first row with a further-shrunk World Map (span 6 → span 5, `.worldMap` in
+`page.module.css`) rather than full width. Also found and fixed a
+pre-existing gap while touching `PanelPrefs.tsx`'s panel registry for the
+new panel: `forex`/`predictions` were never added to it despite already
+being deletable — meant deleting either made it vanish with no way to
+restore from the tray. Fixed alongside the new `earnings_calendar` entry.
+
+**Found and fixed one more real bug live** (same category as the
+2026-08-14 entry's calendar bug): the first deploy still showed "No
+earnings markets reachable" on the live page despite the API itself
+returning 41 real markets via direct curl — `npm run build` (static
+prerender, ISR revalidate 15s) had run *before* `amt-api` was restarted
+with the new endpoint, baking a 404 into the prerendered HTML. Fixed by
+rebuilding `amt-web` a second time after `amt-api` was already serving the
+new route.
+
+**Verified locally:** `make test` (143 api + 1 worker + 60 web, up from
+137/1/57) / `make lint` / `make typecheck` / `next build` all green.
+
+**Verified live** (vespersoul.com): rebuilt/restarted both `amt-api`/
+`amt-web`; `/market/earnings-calendar` confirmed returning 41 real parsed
+markets via curl; screenshotted the rebuilt homepage at desktop (1440px)
+and mobile (390px) widths — Earnings Calendar first, grouped by date with
+real tickers/EPS estimates/probability pills, World Map visibly smaller
+beside it, zero console errors.
+
+**Not done / deliberately deferred:** MCP-server research for "suggests
+daily investments" (separate ask, same message) — reported directly to the
+user, not implemented; Phase 4 (Agent) hasn't started, so there's no tool
+layer yet to wire an MCP server into.
+
+**Next:** unchanged — Phase 4, Agent (`docs/PLAN.md` section 7, P4).
+
+---
+
 ## 2026-08-15 — Housekeeping: committed and pushed several days of uncommitted work
 
 User re-requested the four features from the entry directly below (earnings

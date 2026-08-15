@@ -112,6 +112,17 @@ class PredictionMarket(BaseModel):
     source: str = "polymarket"
 
 
+class EarningsMarket(BaseModel):
+    ticker: str
+    company: str
+    eps_estimate: str | None = None
+    probability_pct: float
+    volume: float
+    report_date: datetime | None = None
+    url: str
+    source: str = "polymarket"
+
+
 class Event(BaseModel):
     ts: datetime
     kind: str

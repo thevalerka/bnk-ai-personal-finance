@@ -11,6 +11,7 @@ from app.market.providers.base import DateRange, ProviderError
 from app.market.router import MarketDataUnavailable, Router
 from app.market.schemas import (
     Candle,
+    EarningsMarket,
     Event,
     FinancialPeriod,
     NewsItem,
@@ -207,6 +208,18 @@ async def _predictions(gateway: MarketGateway) -> list[PredictionMarket]:
     )
 
 
+async def _earnings_calendar(gateway: MarketGateway) -> list[EarningsMarket]:
+    return await _cached_bypass_call(
+        gateway,
+        cache_key="polymarket:earnings_calendar",
+        fresh_ttl_seconds=300,  # dates/EPS estimates barely move intraday
+        budget_provider="polymarket",  # shares polymarket's token bucket with probability()
+        budget_units=1,  # single-page request
+        model=EarningsMarket,
+        fetch=gateway.polymarket.earnings_calendar,
+    )
+
+
 @router.get("/tape")
 async def get_tape(request: Request) -> list[Quote]:
     market_router = _router(request)
@@ -394,3 +407,11 @@ async def get_predictions(request: Request) -> list[PredictionMarket]:
     if not predictions:
         raise HTTPException(status_code=503, detail="market data unavailable")
     return predictions
+
+
+@router.get("/earnings-calendar")
+async def get_earnings_calendar(request: Request) -> list[EarningsMarket]:
+    calendar = await _earnings_calendar(_gateway(request))
+    if not calendar:
+        raise HTTPException(status_code=503, detail="market data unavailable")
+    return calendar

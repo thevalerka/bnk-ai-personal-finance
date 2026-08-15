@@ -2,7 +2,15 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal, Protocol
 
-from app.market.schemas import Candle, Event, FinancialPeriod, NewsItem, PredictionMarket, Quote
+from app.market.schemas import (
+    Candle,
+    EarningsMarket,
+    Event,
+    FinancialPeriod,
+    NewsItem,
+    PredictionMarket,
+    Quote,
+)
 
 CallKind = Literal["quote", "candles", "news", "calendar"]
 
@@ -59,7 +67,9 @@ class FundamentalsProvider(Protocol):
 class ProbabilityProvider(Protocol):
     """Market-implied odds — not one of the four Router capabilities either,
     same rationale as `FundamentalsProvider`. Only `PolymarketProvider`
-    implements this today (docs/DECISIONS.md ADR-0024).
+    implements this today (docs/DECISIONS.md ADR-0024/0026).
     """
 
     async def probability(self, limit: int = 12) -> list[PredictionMarket]: ...
+
+    async def earnings_calendar(self, limit: int = 100) -> list[EarningsMarket]: ...
