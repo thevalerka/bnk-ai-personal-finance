@@ -89,12 +89,40 @@ chunks unchanged — same discipline as ADR-0016's world-atlas lesson).
   this at real money, not attempted this session.
 - Jupiter/Solana RWA (Stage A/B) and Alpaca paper equities untouched.
 
-**Next:** add a real builder address to `apps/api/.ratx`, then live-verify
-with an actual testnet wallet (connect, approve, place + confirm a real
-fill) before considering P6/P7's Hyperliquid slice fully done. After that:
-either resume P5 (Suggestion rail) or continue deepening trading
-(cancel/close-position UI, PnL view, Jupiter/Alpaca paper) — open call for
-the user to make next session.
+**Same-session bugfix, found from a real user report ("approving builder
+fee does nothing"):** `TradingView.tsx` rendered the approve/order
+success-or-error message (`actionError`/`lastResult`) only inside the
+order-form JSX block — which itself only mounts once `wallet.builderApproved`
+is already `true`. So any failure *during* the approve step (the one action
+that's supposed to flip that flag) had nowhere to render — the button just
+silently reset with zero visible feedback, exactly matching the report.
+Fixed by moving that display up into the always-rendered wallet section;
+also gave the `!wallet.client` early-return guards in both `handleApprove`
+and `handleSubmit` a visible message instead of a bare silent `return`.
+Added a regression test asserting an approve failure surfaces its error
+and leaves the approve button in place for a retry (not swapped for the
+order form, which would wrongly imply success). Real builder address
+(`HYPERLIQUID_BUILDER_ADDRESS`, funded via the testnet faucet) was also
+added to `apps/api/.ratx` this session and both `amt-api`/`amt-web`
+restarted — `/trading/config` and `/trade` both confirmed live.
+
+**Not yet root-caused:** whether the original report was *only* this UI
+bug (an approval that actually succeeded but showed nothing) or whether
+the underlying `approveBuilderFeeOnChain` call itself is also failing for
+some other reason (wallet popup never firing, a real Hyperliquid-side
+rejection, etc.) — still can't be told apart without a live browser+wallet
+retry, which needs the user's own click-through now that errors will
+actually surface.
+
+**Verified locally:** `make test` (79 → 80 web tests, +1 regression) /
+`make lint` / `make typecheck` / `next build` all green.
+
+**Next:** have the user retry the approve step live now that errors are
+visible, to see whether it now succeeds outright or surfaces a real error
+message to chase. Once the full connect→approve→order loop is confirmed
+live end-to-end: either resume P5 (Suggestion rail) or continue deepening
+trading (cancel/close-position UI, PnL view, Jupiter/Alpaca paper) — open
+call for the user to make next session.
 
 ---
 

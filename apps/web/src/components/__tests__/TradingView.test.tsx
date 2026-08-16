@@ -112,6 +112,25 @@ describe("TradingView", () => {
     expect(await screen.findByText("Place order")).toBeInTheDocument();
   });
 
+  it("surfaces an error when the approve step itself fails, instead of silently resetting", async () => {
+    mockedFetchTradingConfig.mockResolvedValue(CONFIG);
+    mockedFetchOrderHistory.mockResolvedValue([]);
+    mockedDiscoverWallets.mockResolvedValue([METAMASK]);
+    mockedConnectWallet.mockResolvedValue({ address: "0xABCDEF", client: {} as never });
+    mockedApprove.mockRejectedValue(new Error("User rejected the request."));
+
+    renderView();
+    await connect();
+
+    fireEvent.click(await screen.findByText("Approve builder fee (testnet)"));
+
+    expect(await screen.findByText("User rejected the request.")).toBeInTheDocument();
+    expect(mockedRecordApproval).not.toHaveBeenCalled();
+    // The approve button must still be there to retry — not swapped for the
+    // order form, which would wrongly imply approval succeeded.
+    expect(screen.getByText("Approve builder fee (testnet)")).toBeInTheDocument();
+  });
+
   it("submits a market order and records the fill", async () => {
     mockedFetchTradingConfig.mockResolvedValue(CONFIG);
     mockedFetchOrderHistory.mockResolvedValue([]);

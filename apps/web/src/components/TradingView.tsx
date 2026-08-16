@@ -62,7 +62,10 @@ export function TradingView() {
   }, [wallet.address]);
 
   async function handleApprove() {
-    if (!wallet.client || !wallet.address || !config) return;
+    if (!wallet.client || !wallet.address || !config) {
+      setActionError("Wallet isn't fully connected yet — reconnect and try again.");
+      return;
+    }
     setApproving(true);
     setActionError(null);
     try {
@@ -78,7 +81,10 @@ export function TradingView() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!wallet.client || !wallet.address || !config) return;
+    if (!wallet.client || !wallet.address || !config) {
+      setActionError("Wallet isn't fully connected yet — reconnect and try again.");
+      return;
+    }
     const parsedSize = Number(size);
     if (!Number.isFinite(parsedSize) || parsedSize <= 0) {
       setActionError("Enter a size greater than zero.");
@@ -181,6 +187,11 @@ export function TradingView() {
           </span>
         )}
         {wallet.error && <span className={styles.error}>{wallet.error}</span>}
+        {/* Rendered here (not inside the form below) so a failure during
+            the approve step — which happens before the form ever mounts —
+            is actually visible instead of silently swallowed. */}
+        {actionError && <span className={styles.error}>{actionError}</span>}
+        {lastResult && <span className={styles.result}>{lastResult}</span>}
       </div>
 
       {wallet.address && wallet.builderApproved && (
@@ -236,8 +247,6 @@ export function TradingView() {
               {placing ? "Submitting…" : "Place order"}
             </button>
           </div>
-          {actionError && <span className={styles.error}>{actionError}</span>}
-          {lastResult && <span className={styles.result}>{lastResult}</span>}
         </form>
       )}
 
