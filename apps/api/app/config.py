@@ -41,6 +41,20 @@ class Settings(BaseSettings):
     # ever fetched server-side by Next.js Server Components.
     web_origin: str = "http://localhost:3000"
 
+    # Hyperliquid trading (docs/DECISIONS.md ADR-0028) — testnet only.
+    # Signing/submission happen entirely client-side; these are the public
+    # values the frontend needs to attach our commission to a trade.
+    # Blank builder_address means trading isn't configured yet, same
+    # degrade-honestly pattern as a blank anthropic_api_key: /trading/config
+    # reports `configured: false` rather than the UI silently offering a
+    # dead flow.
+    hyperliquid_builder_address: str = ""
+    # Tenths of a basis point (10 = 1bp) — Hyperliquid's own field unit.
+    # Cap is 100 (10bp) for perps.
+    hyperliquid_builder_fee_tenths_bp: int = 10
+    hyperliquid_testnet_base_url: str = "https://api.hyperliquid-testnet.xyz"
+    trading_rate_limit_per_minute: int = 20
+
 
 @lru_cache
 def get_settings() -> Settings:

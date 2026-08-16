@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { ExplainPanelProvider } from "@/components/ExplainPanel";
 import { PanelPrefsProvider } from "@/components/PanelPrefs";
+import { WalletProvider } from "@/components/Wallet";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -45,9 +46,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        <PanelPrefsProvider>
-          <ExplainPanelProvider>{children}</ExplainPanelProvider>
-        </PanelPrefsProvider>
+        <WalletProvider>
+          <PanelPrefsProvider>
+            <ExplainPanelProvider>{children}</ExplainPanelProvider>
+          </PanelPrefsProvider>
+        </WalletProvider>
       </body>
     </html>
   );

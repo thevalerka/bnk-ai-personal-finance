@@ -9,9 +9,11 @@ from app.agent.budget import AgentBudget
 from app.api.agent import router as agent_router
 from app.api.market import router as market_router
 from app.api.profile import router as profile_router
+from app.api.trading import router as trading_router
 from app.config import get_settings
 from app.db import create_pool, init_schema
 from app.market.dependencies import build_market_gateway
+from app.trading.gateway import build_trading_gateway
 
 settings = get_settings()
 
@@ -21,6 +23,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.market_gateway = build_market_gateway(settings)
     app.state.db_pool = await create_pool(settings)
     await init_schema(app.state.db_pool)
+    # Reuses the market gateway's httpx client + Redis, same rationale as
+    # agent_budget below — this is another consumer of shared infra, not a
+    # reason to open new connections.
+    app.state.trading_gateway = build_trading_gateway(
+        settings, app.state.market_gateway.http_client, app.state.market_gateway.redis
+    )
     # Reuses the gateway's own Redis connection rather than opening a
     # second one — the agent's budget/rate-limit counters are just more
     # keys in the same store.
@@ -53,6 +61,7 @@ app.add_middleware(
 app.include_router(market_router)
 app.include_router(profile_router)
 app.include_router(agent_router)
+app.include_router(trading_router)
 
 
 @app.get("/health")

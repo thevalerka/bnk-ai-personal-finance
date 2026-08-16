@@ -220,7 +220,14 @@ Hard monthly token budget in config, enforced at the API layer. Per-IP and per-p
 
 ---
 
-## 6. Trading layer (phase 6+, feature-flagged, off by default)
+## 6. Trading layer (pulled ahead of P5, feature-flagged toward mainnet — see docs/DECISIONS.md ADR-0028)
+
+Hyperliquid trading (this section's Stage C) shipped early and out of phase
+order: a 2026-08-16 session pivot toward commission/referral revenue moved
+it ahead of P5 (Suggestion rail), and P6 (read-only wallet)/P7 (flagged
+execution) below are effectively done in one combined pass rather than two
+— testnet only, no mainnet path yet. Stages A/B (Solana wallet-connect/
+Jupiter RWA) remain unstarted and unscheduled; nothing here blocks on them.
 
 Non-custodial, permissionless, **client-side signing only**. The backend never sees a private key, never holds funds, never routes an order it did not receive from a user-signed transaction.
 
@@ -261,16 +268,16 @@ Tool-use loop, SSE streaming, inline chart rendering, `add_block`/`set_focus` da
 **DoD:** ten canned questions answered with sourced figures; zero fabricated numbers in the eval set; dashboard mutation works end-to-end.
 
 ### P5 — Suggestion rail (2 days)
-Event pool, cluster generation, per-user re-ranking, card types, mute/pin feedback loop into the interest vector.
+Not started — deprioritized behind the Hyperliquid trading pivot below (docs/DECISIONS.md ADR-0028). Event pool, cluster generation, per-user re-ranking, card types, mute/pin feedback loop into the interest vector.
 **DoD:** rail populated on first visit; a rates-heavy persona gets visibly different cards from a crypto persona; every card has a live source link.
 
 ### P6 — Wallet + read-only chain (1.5 days)
-SIWS auth, profile migration cookie→wallet, balances, RWA/Hyperliquid position view.
-**DoD:** connect wallet, see real holdings, profile persists across devices.
+Hyperliquid slice done (2026-08-16, docs/DECISIONS.md ADR-0028): EVM wallet connect via viem, `/trade` page. Solana wallet-adapter/SIWS auth and RWA balances view (Stage A/B) not started.
+**DoD:** connect wallet, see real holdings, profile persists across devices. *(Met for Hyperliquid; not yet for the Solana/RWA side.)*
 
 ### P7 — Execution, flagged (2–3 days)
-Jupiter route + sign + submit on devnet; Hyperliquid agent-wallet order flow on testnet; Alpaca paper for equities; full disclaimers; kill switch.
-**DoD:** end-to-end trade on testnet/devnet/paper with confirmations and error handling; flag off in production by default.
+Hyperliquid slice done (2026-08-16, ADR-0028): builder-fee-tagged testnet order flow, signed and submitted entirely client-side, verified fills logged for commission accounting. Jupiter/devnet and Alpaca paper equities not started. No kill switch yet — not needed while there is no mainnet path, but required before one exists.
+**DoD:** end-to-end trade on testnet/devnet/paper with confirmations and error handling; flag off in production by default. *(Met for Hyperliquid testnet; not yet for Jupiter/devnet or Alpaca paper.)*
 
 ### P8 — Showcase polish (1.5 days)
 `/architecture` live metrics page, `/notes` engineering log with 3 posts, `terminal-mcp` package published, README with GIFs, OG images, seeded demo profiles, uptime + status. Recruiter path: landing → 1-click persona → prompt bar demo → architecture page.

@@ -45,3 +45,29 @@ CREATE TABLE IF NOT EXISTS interest_scores (
     muted BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (profile_id, node_id)
 );
+
+-- Hyperliquid trading (docs/DECISIONS.md ADR-0028). Both tables are a
+-- record of what the wallet already did directly against Hyperliquid
+-- (client-side signed, testnet) — the backend never signs or holds a key,
+-- it only logs confirmed activity for the operator's own commission
+-- accounting. wallet_address is always lower-cased before storage/lookup.
+
+CREATE TABLE IF NOT EXISTS builder_approvals (
+    id BIGSERIAL PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    max_fee_tenths_bp INTEGER NOT NULL,
+    approved_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS builder_approvals_wallet_idx ON builder_approvals (wallet_address);
+
+CREATE TABLE IF NOT EXISTS order_fills (
+    id BIGSERIAL PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    coin TEXT NOT NULL,
+    side TEXT NOT NULL,
+    size DOUBLE PRECISION NOT NULL,
+    price DOUBLE PRECISION NOT NULL,
+    builder_fee_tenths_bp INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS order_fills_wallet_ts_idx ON order_fills (wallet_address, created_at DESC);

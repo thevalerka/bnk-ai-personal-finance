@@ -53,6 +53,15 @@
   cursor: default;
 }
 
+.navLink {
+  color: inherit;
+  transition: color var(--transition-fast);
+}
+
+.navLink:hover {
+  color: var(--accent);
+}
+
 .navActive {
   color: var(--text-primary);
   position: relative;

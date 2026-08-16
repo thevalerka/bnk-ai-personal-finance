@@ -5,6 +5,99 @@ Newest entry first.
 
 ---
 
+## 2026-08-16 — Hyperliquid trading (testnet, builder-fee commission) — pulled ahead of P5
+
+New product direction: real, non-custodial trading through this interface,
+earning a small commission per trade via Hyperliquid's builder codes,
+rather than a spread/custody fee. Per this session's decision, jumps ahead
+of P5 (Suggestion rail) in `docs/PLAN.md`; P6/P7's Hyperliquid slice is
+done in one combined pass. Full detail, including the signing-scheme
+research and a mid-implementation architecture change, in
+`docs/DECISIONS.md` ADR-0028.
+
+**Backend** (`apps/api/app/trading/`, new): thin post-hoc commission
+ledger, *not* a signing/relay gateway — that design changed mid-session
+once `@nktkas/hyperliquid`'s `ExchangeClient` turned out to sign-and-submit
+in one call with no supported way to get a signed-but-unsubmitted payload
+back out. `GET /trading/config` (public builder address/fee rate),
+`POST /trading/approvals` and `POST /trading/fills` (logged only after the
+browser already got Hyperliquid to accept the signed action for real —
+`/trading/fills` re-verifies the claimed order via a live `orderStatus`
+call before persisting), `GET /trading/orders?wallet=`. New Postgres tables
+`builder_approvals`/`order_fills`. Per-wallet rate limit
+(`app/trading/budget.py`) copying `app.agent.budget.AgentBudget`'s Redis
+idiom. `hyperliquid_builder_address` defaults blank in `.ratx` — same
+honest-degrade pattern as a blank `anthropic_api_key`, `/trading/config`
+reports `configured: false` until a real operator address is set.
+
+**Frontend** (`apps/web/`): first web3 dependencies in the repo (`viem` +
+`@nktkas/hyperliquid`). `lib/wallet.ts` (injected EVM wallet discovery +
+connect, no Hyperliquid knowledge), `lib/hyperliquid.ts` (all signing —
+approve builder fee, place order — entirely client-side against
+`api.hyperliquid-testnet.xyz`), `components/Wallet.tsx` (Context, same
+pattern as `PanelPrefs.tsx`), `lib/trading.ts` (backend logging client,
+same `NEXT_PUBLIC_API_PUBLIC_URL`+credentials convention as
+`lib/attention.ts`), new `/trade` page (`TradingView.tsx`) — prominent
+"TESTNET — no real funds" banner, connect → one-time builder-fee approval
+→ order form (BTC/ETH/SOL, market-as-slippage-IOC or limit/GTC) → fill
+history. A real TS/viem-typing friction point (viem's `WalletClient` type
+requires `account` structurally on every `signTypedData` call site even
+though it's optional at runtime once bound at construction) is isolated in
+one documented cast, `lib/hyperliquid.ts`'s `asAbstractWallet()`.
+
+**MetaMask + Phantom, same-session follow-up:** wallet discovery rebuilt on
+EIP-6963 (`window.dispatchEvent`/`addEventListener("eip6963:announceProvider")`)
+instead of a bare `window.ethereum` check — with both extensions installed,
+`window.ethereum` is a real collision (whichever wallet's script runs last
+wins it silently), and EIP-6963 is the standard both wallets support
+specifically to fix that. Static fallbacks cover wallets that haven't
+adopted it yet: `window.ethereum` (labeled via `isMetaMask`) and Phantom's
+own non-colliding `window.phantom.ethereum`. `Wallet.tsx`'s context grew
+`availableWallets`/`refreshWallets`, and `connect()` now takes a wallet id
+so `TradingView` renders one button per detected wallet instead of a
+single "Connect wallet" action. Full detail in `docs/DECISIONS.md`
+ADR-0028.
+
+**Verified before writing signing code, live against the real testnet
+API** (not assumed from docs): `orderStatus` for a nonexistent order really
+does return exactly `{"status": "unknownOid"}` (confirmed via curl before
+`hyperliquid_exchange.py`'s verification check was written against it);
+`{"type": "meta"}` confirms BTC/ETH/SOL are real tradeable testnet perps
+with the expected `szDecimals`.
+
+**Verified locally:** `make test` (195 api, up from 181 — +14 trading
+tests; 1 worker; 79 web, up from 67 — +12 Wallet/TradingView tests) /
+`make lint` / `make typecheck` / `next build` all green. `/trade` route
+adds ~32kB to its own bundle (viem+SDK scoped to that page only, shared
+chunks unchanged — same discipline as ADR-0016's world-atlas lesson).
+
+**Not done / deliberately deferred:**
+
+- **No live wallet-in-browser verification** — this environment has no
+  browser with MetaMask/Phantom installed to click through a real connect
+  → approve → order flow end-to-end, with either wallet. Every piece that
+  *doesn't* need a browser wallet was verified for real (backend tests
+  against a real Postgres/Redis, a live curl round-trip against
+  Hyperliquid's actual testnet `/info` API); the signed-transaction path
+  and EIP-6963 discovery itself are only verified via mocked unit/
+  component tests. Revisit with a real testnet wallet + testnet USDC
+  (faucet) before calling this phase's DoD fully met.
+- No real `hyperliquid_builder_address` configured anywhere yet (`.ratx`
+  blank) — same "not done" as the agent's `ANTHROPIC_API_KEY` before it.
+- No mainnet path, no kill switch, no live-funds opt-in — P7's other
+  non-negotiables (`docs/PLAN.md` section 6), required before ever pointing
+  this at real money, not attempted this session.
+- Jupiter/Solana RWA (Stage A/B) and Alpaca paper equities untouched.
+
+**Next:** add a real builder address to `apps/api/.ratx`, then live-verify
+with an actual testnet wallet (connect, approve, place + confirm a real
+fill) before considering P6/P7's Hyperliquid slice fully done. After that:
+either resume P5 (Suggestion rail) or continue deepening trading
+(cancel/close-position UI, PnL view, Jupiter/Alpaca paper) — open call for
+the user to make next session.
+
+---
+
 ## 2026-08-15 — Phase 4: Agent (tool-use loop, prompt bar, dashboard mutation) — built, tested, not yet live-verified
 
 Full phase per `docs/PLAN.md` section 5/7 (P4). Full detail in

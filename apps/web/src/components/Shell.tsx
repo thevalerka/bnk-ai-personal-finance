@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PersonaSwitcher } from "./PersonaSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { PanelRestoreTray } from "./PanelRestoreTray";
@@ -16,6 +17,9 @@ export function Shell() {
       </h1>
       <nav className={styles.nav}>
         <span className={styles.navActive}>Dashboard</span>
+        <Link href="/trade" className={styles.navLink}>
+          Trade · testnet
+        </Link>
         <span>Architecture · soon</span>
         <span>Notes · soon</span>
       </nav>
