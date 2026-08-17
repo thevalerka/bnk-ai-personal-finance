@@ -85,6 +85,19 @@ at verification time.
   pre-IPO) rather than displaying an unbounded, unaudited list.
 - No Lighthouse re-run against the two new pages.
 
+**Deployed live** (vespersoul.com): `amt-api` restarted first (new
+`/jupiter/*` routes, `dex_swaps`/`lend_positions` tables applied via
+`init_schema` on startup), then `amt-web` rebuilt against the now-live API
+and restarted — same ordering lesson as the 2026-08-14 entry (build the
+static prerender only after the API it queries is already serving the new
+routes). Verified post-deploy: homepage shows Prediction of the Day (World
+Indices gone), real xStocks prices and lending APYs in both teaser blocks;
+`/xstocks` and `/lend` both 200; `https://api.vespersoul.com/jupiter/config`
+confirms `trading_enabled: false` in production — the kill switch is off
+live, exactly as intended (no `JUPITER_*` vars are set in the production
+`.ratx`). `amt-worker` untouched (nothing in this session's diff touches
+it).
+
 **Next:** operator review of ADR-0029 before ever setting
 `JUPITER_TRADING_ENABLED=true`; otherwise Phase 5 — Suggestion rail
 (`docs/PLAN.md` section 7, P5), or resume Hyperliquid mainnet work,
