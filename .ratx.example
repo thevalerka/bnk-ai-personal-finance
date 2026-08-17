@@ -34,3 +34,19 @@ FRED_API_KEY=
 # Not wired to a provider yet — reserved for when Twelve Data/SEC EDGAR land.
 TWELVE_DATA_API_KEY=
 SEC_EDGAR_USER_AGENT=
+
+# --- Hyperliquid trading (testnet only, docs/DECISIONS.md ADR-0028) ---
+HYPERLIQUID_BUILDER_ADDRESS=
+
+# --- Jupiter (jup.ag): xStocks swaps + Jupiter Lend stablecoin lending,
+# Solana mainnet (docs/DECISIONS.md ADR-0029). Free to register at
+# portal.jup.ag; xstocks/lend-tokens listing works keylessly too, just at
+# a lower rate limit.
+JUPITER_API_KEY=
+# Real mainnet funds move on this path once true — leave unset/false until
+# you've actually reviewed the swap/lend flow end-to-end.
+JUPITER_TRADING_ENABLED=false
+# Commission (Jupiter's own platformFeeBps mechanism) — both blank means no
+# fee is attached to swaps.
+JUPITER_PLATFORM_FEE_BPS=0
+JUPITER_FEE_ACCOUNT=

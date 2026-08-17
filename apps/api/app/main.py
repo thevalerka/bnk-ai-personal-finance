@@ -7,11 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.budget import AgentBudget
 from app.api.agent import router as agent_router
+from app.api.jupiter import router as jupiter_router
 from app.api.market import router as market_router
 from app.api.profile import router as profile_router
 from app.api.trading import router as trading_router
 from app.config import get_settings
 from app.db import create_pool, init_schema
+from app.jupiter.gateway import build_jupiter_gateway
 from app.market.dependencies import build_market_gateway
 from app.trading.gateway import build_trading_gateway
 
@@ -27,6 +29,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # agent_budget below — this is another consumer of shared infra, not a
     # reason to open new connections.
     app.state.trading_gateway = build_trading_gateway(
+        settings, app.state.market_gateway.http_client, app.state.market_gateway.redis
+    )
+    # Same reuse rationale as trading_gateway above (docs/DECISIONS.md ADR-0029).
+    app.state.jupiter_gateway = build_jupiter_gateway(
         settings, app.state.market_gateway.http_client, app.state.market_gateway.redis
     )
     # Reuses the gateway's own Redis connection rather than opening a
@@ -62,6 +68,7 @@ app.include_router(market_router)
 app.include_router(profile_router)
 app.include_router(agent_router)
 app.include_router(trading_router)
+app.include_router(jupiter_router)
 
 
 @app.get("/health")

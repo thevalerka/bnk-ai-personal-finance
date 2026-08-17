@@ -171,3 +171,27 @@ export function fetchPredictions(): Promise<PredictionMarket[] | null> {
 export function fetchEarningsCalendar(): Promise<EarningsMarket[] | null> {
   return getJSON<EarningsMarket[]>("/market/earnings-calendar", 300);
 }
+
+// Read-only dashboard teasers for the /jupiter/* surface (docs/DECISIONS.md
+// ADR-0029) — full detail/swap/deposit UI lives on /xstocks and /lend,
+// this just needs the same server-side, no-credentials GET every other
+// homepage block already uses.
+export interface XStockTeaser {
+  symbol: string;
+  name: string;
+  price_usd: number;
+  category: "public_equity" | "pre_ipo";
+}
+
+export interface LendTokenTeaser {
+  symbol: string;
+  supply_apy_pct: number;
+}
+
+export function fetchXStocksTeaser(): Promise<XStockTeaser[] | null> {
+  return getJSON<XStockTeaser[]>("/jupiter/xstocks", 60);
+}
+
+export function fetchLendTokensTeaser(): Promise<LendTokenTeaser[] | null> {
+  return getJSON<LendTokenTeaser[]>("/jupiter/lend-tokens", 60);
+}

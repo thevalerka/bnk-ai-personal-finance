@@ -4,6 +4,73 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0029: xStocks (Jupiter/jup.ag) tokenized-equity swaps + Jupiter Lend stablecoin lending — backend proxies Jupiter's API rather than direct browser→Jupiter signing
+
+**Context:** Same session pivot as ADR-0028 (real trading), extended to two
+more products: tokenized equities on Solana via Jupiter's aggregator
+("xStocks", issued by Backed Finance) and stablecoin lending yield
+(Jupiter Lend). Unlike Hyperliquid, Jupiter's REST API needs a secret
+`x-api-key` for its normal rate-limit tier — the browser can't hold that
+without leaking it — so the direct browser→vendor signing pattern ADR-0028
+used doesn't transfer cleanly here.
+
+**Decision:** The backend (`apps/api/app/jupiter/`) proxies every Jupiter
+call — token search, swap quote, unsigned-transaction build, lend
+deposit/withdraw build — translating Jupiter's wire shapes into this
+repo's own canonical schemas (`app/jupiter/schemas.py`), same "no vendor
+SDK/shape past the Gateway boundary" rule the market-data providers
+already follow. The backend never signs anything: every proxied call
+returns either read-only data or an *unsigned* transaction; the browser
+(`lib/jupiter.ts`, `@solana/web3.js`) deserializes it, signs with the
+user's own Solana wallet (Phantom/Solflare, direct injected-object
+detection — `lib/solanaWallet.ts` — rather than implementing the full
+Wallet Standard protocol, a smaller surface for the two wallets that
+matter here), and submits it straight to Solana. `/jupiter/*-fills` only
+logs a claimed swap/deposit after re-verifying the signature actually
+landed on-chain via a public Solana RPC (`solana_verify.py`) — same
+never-trust-a-claimed-fill pattern as `hyperliquid_exchange.order_exists`.
+
+Two things confirmed live against the real API before writing any code
+(never assumed from docs): (1) `/tokens/v2/search` for a popular xStock
+ticker reliably returns copy-cat launchpad tokens alongside the real one
+(same symbol, `isVerified` unset, price off by ~8 orders of magnitude) —
+`search_token()` only ever returns a strictly `isVerified: true` match,
+never an unfiltered first result. (2) "Pre-IPO xStocks" are real, not a
+misconception: `VCXx` wraps Fundrise's public VCX fund (itself holding
+private SpaceX/OpenAI/Anthropic/Databricks stakes) and `SPCXx` is a direct
+synthetic SpaceX tracker — both flagged `category="pre_ipo"` with an
+explicit no-shareholder-rights disclosure, distinct from the ~13
+already-public-equity xStocks in the curated catalog
+(`app/jupiter/catalog.py`).
+
+Unlike Hyperliquid, there is no meaningful testnet for either product (no
+real liquidity), so the kill switch PLAN.md section 6 requires is a
+config flag (`JUPITER_TRADING_ENABLED`, default `false`) rather than a
+network choice: xStocks prices and Jupiter Lend APYs always render (real
+data, keyless-capable), but every endpoint that returns a *signable*
+transaction refuses with 503 until an operator explicitly opts in — this
+build ships with it off. Commission mirrors ADR-0028's builder-fee model
+via Jupiter's own `platformFeeBps`/`feeAccount` mechanism, same
+blank-account-means-unconfigured degrade as a blank
+`hyperliquid_builder_address`.
+
+**Consequence:** One backend module change (adding an operator API key,
+fee account, and flipping the trading-enabled flag) is enough to go from
+"read-only demo" to "real signing," without touching frontend code — but
+it also means this backend now proxies a step (unsigned-transaction
+construction) Hyperliquid's design deliberately kept out of the backend
+entirely; the non-negotiable that matters here is preserved anyway
+(backend still never sees a signature or a private key), but it's a
+different shape of "non-custodial" than ADR-0028's, worth remembering if
+a future reviewer expects the two trading surfaces to work identically.
+No live wallet-in-browser verification was possible in this environment
+(same gap ADR-0028 already had) — every piece that doesn't need a browser
+wallet was verified for real (live curl against Jupiter's actual mainnet
+API, backend tests against real Postgres/Redis); signing itself is only
+verified via mocked component tests.
+
+---
+
 ## ADR-0028: Hyperliquid trading (testnet, builder-fee commission) — pulled ahead of P5, direct browser→Hyperliquid signing, backend as a post-hoc commission ledger only
 
 **Context:** New product direction, separate from the read-only dashboard: let users trade through this interface while execution happens directly on Hyperliquid, earning a small commission per trade via Hyperliquid's **builder codes** (not a spread or custody fee). `docs/PLAN.md` section 6 already sketched this as P6 (read-only wallet)/P7 (flagged execution), sequenced after P5 (Suggestion rail) — per this session's decision, it jumps ahead of P5 instead, and P6/P7 are effectively done in one combined pass, testnet-only.

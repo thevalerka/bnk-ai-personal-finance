@@ -55,6 +55,34 @@ class Settings(BaseSettings):
     hyperliquid_testnet_base_url: str = "https://api.hyperliquid-testnet.xyz"
     trading_rate_limit_per_minute: int = 20
 
+    # Jupiter (jup.ag) — xStocks tokenized-equity swaps + Jupiter Lend
+    # stablecoin lending, both on Solana mainnet (docs/DECISIONS.md
+    # ADR-0029). Unlike Hyperliquid there is no meaningful testnet for
+    # either product (no real liquidity), so signing is gated behind an
+    # explicit opt-in rather than a network choice — the kill switch
+    # PLAN.md section 6 requires. Blank api key still works (Jupiter's
+    # public tier), just at a lower rate limit.
+    jupiter_api_key: str = ""
+    jupiter_base_url: str = "https://api.jup.ag"
+    # Off by default: /jupiter/swap-transaction and /jupiter/lend-transaction
+    # refuse with 503 until an operator explicitly flips this in .ratx,
+    # same "not silently offering a dead-or-dangerous flow" pattern as a
+    # blank hyperliquid_builder_address, but load-bearing here since a
+    # signed tx on this path moves real mainnet funds.
+    jupiter_trading_enabled: bool = False
+    # Commission model mirrors Hyperliquid's builder fee: Jupiter's own
+    # platformFeeBps + feeAccount mechanism. Blank fee_account means no fee
+    # is attached (platformFeeBps is omitted from the request entirely
+    # rather than sent with nowhere to route it).
+    jupiter_platform_fee_bps: int = 0
+    jupiter_fee_account: str = ""
+    # Public, keyless Solana RPC — used only to re-verify a claimed
+    # swap/deposit signature actually landed on-chain before logging it
+    # (same "never trust a claimed fill at face value" pattern as
+    # hyperliquid_exchange.order_exists), never to submit or sign anything.
+    solana_rpc_url: str = "https://api.mainnet-beta.solana.com"
+    jupiter_rate_limit_per_minute: int = 20
+
 
 @lru_cache
 def get_settings() -> Settings:

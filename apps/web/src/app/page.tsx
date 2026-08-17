@@ -9,10 +9,12 @@ import { YieldCurve } from "@/components/YieldCurve";
 import { Heatmap } from "@/components/Heatmap";
 import { NewsList } from "@/components/NewsList";
 import { EconomicCalendar } from "@/components/EconomicCalendar";
-import { WorldMap } from "@/components/WorldMap";
+import { PredictionOfDay } from "@/components/PredictionOfDay";
 import { Forex } from "@/components/Forex";
 import { PredictionMarkets } from "@/components/PredictionMarkets";
 import { EarningsCalendar } from "@/components/EarningsCalendar";
+import { XStocksTeaser } from "@/components/XStocksTeaser";
+import { LendTeaser } from "@/components/LendTeaser";
 import styles from "./page.module.css";
 
 const TAPE_GROUPS: QuoteGroup[] = [
@@ -53,10 +55,14 @@ export default function Home() {
           </Suspense>
         </PanelSlot>
 
-        <PanelSlot id="world_map" title="World Indices" spanClassName={styles.worldMap}>
-          <Suspense fallback={<BlockSkeleton title="World Indices" minHeight={420} />}>
-            <Block id="world_map" title="World Indices" source="country ETF proxies">
-              <WorldMap />
+        <PanelSlot
+          id="prediction_of_day"
+          title="Prediction of the Day"
+          spanClassName={styles.predictionOfDay}
+        >
+          <Suspense fallback={<BlockSkeleton title="Prediction of the Day" minHeight={420} />}>
+            <Block id="prediction_of_day" title="Prediction of the Day" source="Polymarket">
+              <PredictionOfDay />
             </Block>
           </Suspense>
         </PanelSlot>
@@ -121,6 +127,22 @@ export default function Home() {
           <Suspense fallback={<BlockSkeleton title="Prediction Markets" minHeight={300} />}>
             <Block id="predictions" title="Prediction Markets" source="Polymarket">
               <PredictionMarkets />
+            </Block>
+          </Suspense>
+        </PanelSlot>
+
+        <PanelSlot id="xstocks" title="xStocks" spanClassName={styles.xstocks}>
+          <Suspense fallback={<BlockSkeleton title="xStocks" minHeight={260} />}>
+            <Block id="xstocks" title="xStocks" source="Jupiter (jup.ag)">
+              <XStocksTeaser />
+            </Block>
+          </Suspense>
+        </PanelSlot>
+
+        <PanelSlot id="fixed_income" title="Fixed Income" spanClassName={styles.fixedIncome}>
+          <Suspense fallback={<BlockSkeleton title="Fixed Income" minHeight={260} />}>
+            <Block id="fixed_income" title="Fixed Income" source="Jupiter Lend">
+              <LendTeaser />
             </Block>
           </Suspense>
         </PanelSlot>

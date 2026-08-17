@@ -37,11 +37,10 @@
   align-self: start;
 }
 
-/* Shares the first row with the Earnings Calendar now (user request) —
-   further reduced from the earlier 50% (span 6) to make room. 100% below
-   desktop still, since the map is the thing most worth full-width real
-   estate on a narrow screen, not the thing to keep small. */
-.worldMap {
+/* Shares the first row with the Earnings Calendar (user request) — replaced
+   World Map in this slot. 100% below desktop still, since it's the most
+   worth full-width real estate on a narrow screen. */
+.predictionOfDay {
   grid-column: span 5;
 }
 
@@ -63,6 +62,18 @@
   align-self: start;
 }
 
+/* xStocks + Fixed Income share a row (docs/DECISIONS.md ADR-0029) — both
+   are compact teaser lists linking out to /xstocks and /lend. */
+.xstocks {
+  grid-column: span 6;
+  align-self: start;
+}
+
+.fixedIncome {
+  grid-column: span 6;
+  align-self: start;
+}
+
 @media (max-width: 1023px) {
   .dashboard {
     grid-template-columns: repeat(6, 1fr);
@@ -81,12 +92,14 @@
   .mostTraded {
     grid-column: span 6;
   }
-  .worldMap,
+  .predictionOfDay,
   .earningsCalendar {
     grid-column: span 6;
   }
   .forex,
-  .predictions {
+  .predictions,
+  .xstocks,
+  .fixedIncome {
     grid-column: span 6;
   }
 }
@@ -101,10 +114,12 @@
   .newsList,
   .calendar,
   .mostTraded,
-  .worldMap,
+  .predictionOfDay,
   .earningsCalendar,
   .forex,
-  .predictions {
+  .predictions,
+  .xstocks,
+  .fixedIncome {
     grid-column: span 1;
   }
 }

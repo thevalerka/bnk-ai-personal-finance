@@ -71,3 +71,34 @@ CREATE TABLE IF NOT EXISTS order_fills (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS order_fills_wallet_ts_idx ON order_fills (wallet_address, created_at DESC);
+
+-- Jupiter (jup.ag) xStocks swaps + Jupiter Lend stablecoin deposits/
+-- withdrawals (docs/DECISIONS.md ADR-0029). Same role as the two tables
+-- above: a record of what the wallet already did directly on Solana
+-- mainnet (client-side signed) — the backend never signs or holds a key,
+-- it only logs a claimed action after re-verifying the signature actually
+-- landed on-chain (app/jupiter/solana_verify.py).
+
+CREATE TABLE IF NOT EXISTS dex_swaps (
+    id BIGSERIAL PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    input_mint TEXT NOT NULL,
+    output_mint TEXT NOT NULL,
+    in_amount TEXT NOT NULL,
+    out_amount TEXT NOT NULL,
+    signature TEXT NOT NULL UNIQUE,
+    platform_fee_bps INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS dex_swaps_wallet_ts_idx ON dex_swaps (wallet_address, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS lend_positions (
+    id BIGSERIAL PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    asset_mint TEXT NOT NULL,
+    action TEXT NOT NULL,
+    amount TEXT NOT NULL,
+    signature TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS lend_positions_wallet_ts_idx ON lend_positions (wallet_address, created_at DESC);

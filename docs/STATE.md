@@ -5,6 +5,93 @@ Newest entry first.
 
 ---
 
+## 2026-08-17 — xStocks (Jupiter) + Jupiter Lend stablecoin lending, homepage: World Map → Prediction of the Day
+
+Session pivot away from Hyperliquid (paused, not touched this session) to
+two new real-money products, per user direction: xStocks tokenized-equity
+swaps and stablecoin lending, both via Jupiter (jup.ag) on Solana mainnet
+— full detail, including the mid-session research that shaped the design
+(backend-proxies-Jupiter instead of direct browser signing; the
+copy-cat-token / pre-IPO-xStocks findings), in `docs/DECISIONS.md`
+ADR-0029. Also: removed World Map from the homepage's top-left slot,
+replaced with a "Prediction of the Day" card; both were explicit user
+requests for this session.
+
+**Prediction of the Day** (`components/PredictionOfDay.tsx`): reuses the
+existing `polymarket.probability()` feed `PredictionMarkets` already
+fetches (no new backend endpoint) — narrows it, client-side, to whichever
+real market resolves within the next 24h, picks the highest-volume one.
+Shows an honest "nothing resolves that soon" message rather than a market
+that isn't really "today" if none qualify. World Map's component/CSS
+files are untouched, just unwired from the homepage.
+
+**Backend** (`apps/api/app/jupiter/`, new — sibling to `app/trading/`):
+`client.py` wraps Jupiter's REST API (token search v2, swap quote/build
+v1, Lend earn deposit/withdraw v1); `catalog.py` is a curated ~15-symbol
+xStocks seed list (name + category only) that `api/jupiter.py` resolves
+to a real mint + live price via `client.search_token()` at request time,
+never a hardcoded mint/price; `solana_verify.py` re-verifies a claimed
+swap/deposit signature against a public Solana RPC before
+`/jupiter/*-fills` logs it (same pattern as
+`hyperliquid_exchange.order_exists`); `gateway.py`/`budget.py`/`service.py`
+mirror `app/trading/`'s split. New Postgres tables `dex_swaps`,
+`lend_positions`. `JUPITER_TRADING_ENABLED` (default `false`) gates every
+endpoint that returns a signable transaction — xStocks prices and Lend
+APYs always render regardless (real data, keyless-capable Jupiter tier).
+
+**Frontend**: `lib/solanaWallet.ts` (Phantom/Solflare direct-injection
+detection — deliberately not the full Wallet Standard protocol, see
+ADR-0029 for the tradeoff), `components/SolanaWallet.tsx` (Context, same
+shape as `Wallet.tsx`, mounted once in `layout.tsx` alongside it),
+`lib/jupiter.ts` (backend-proxy client + `@solana/web3.js`
+deserialize/sign/send — the only file in the repo that imports
+`@solana/web3.js`, so it stays scoped to the two routes that need it, same
+discipline as ADR-0016's world-atlas lesson: `/xstocks` and `/lend` each
+add ~10kB over the shared baseline). New `/xstocks`
+(`XStocksView.tsx`) and `/lend` (`LendView.tsx`) pages: disclosure banner
+(text differs by `trading_enabled`), live price/APY tables always shown,
+wallet-connect + quote/swap or deposit/withdraw form + fill history only
+once trading is enabled. Homepage gained two read-only teaser blocks
+(`XStocksTeaser.tsx`, `LendTeaser.tsx`, server components, zero client JS
+cost) linking to the full pages.
+
+**Verified locally:** `make test` (219 api, up from 195 — +24 jupiter
+tests; 1 worker; 105 web, up from 79 — +26 tests) / `make lint` / `next
+build` all green. Live-verified against the real Jupiter API before
+writing the client (not assumed from docs): keyless token search, swap
+quote, and Lend vault listing all returned real current data via curl;
+confirmed `/tokens/v2/search` returns unverified copy-cat tokens
+alongside real xStocks (drove the strict-`isVerified` filter);
+confirmed real prices for AAPLx ($306.77), TSLAx ($340.40), VCXx
+($43.82), SPCXx ($139.75), and real Jupiter Lend USDC supply APY (3.86%)
+at verification time.
+
+**Not done / deliberately deferred:**
+
+- **No live wallet-in-browser verification** — same gap ADR-0028 already
+  had for Hyperliquid, for the same reason (no browser with a wallet
+  extension in this environment). Signing itself is only verified via
+  mocked component tests.
+- `JUPITER_TRADING_ENABLED` is off and `JUPITER_API_KEY`/`JUPITER_FEE_ACCOUNT`
+  are blank in `.ratx` — same "not done" as `hyperliquid_builder_address`
+  before it, except load-bearing here since there's no testnet: flipping
+  this flag moves real mainnet funds the moment it's set.
+- Stage A (a dedicated read-only Solana wallet/balances view, independent
+  of xStocks/Lend) — the wallet-connect plumbing exists now as a side
+  effect of Stage B, but no balances/positions UI was built.
+- Catalog is ~15 symbols, not Jupiter's full xStocks list — deliberately
+  small and hand-curated (no canonical registry exists to pull from) so
+  every entry could be reasoned about individually (public-equity vs.
+  pre-IPO) rather than displaying an unbounded, unaudited list.
+- No Lighthouse re-run against the two new pages.
+
+**Next:** operator review of ADR-0029 before ever setting
+`JUPITER_TRADING_ENABLED=true`; otherwise Phase 5 — Suggestion rail
+(`docs/PLAN.md` section 7, P5), or resume Hyperliquid mainnet work,
+per user direction next session.
+
+---
+
 ## 2026-08-16 — Hyperliquid trading (testnet, builder-fee commission) — pulled ahead of P5
 
 New product direction: real, non-custodial trading through this interface,

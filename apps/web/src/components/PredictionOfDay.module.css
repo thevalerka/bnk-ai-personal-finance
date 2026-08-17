@@ -1,0 +1,84 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.card:hover {
+  background: var(--surface-2);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.timeLeft {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.question {
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.probabilityRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.probability {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.high {
+  color: var(--positive);
+}
+
+.low {
+  color: var(--negative);
+}
+
+.mid {
+  color: var(--text-secondary);
+}
+
+.probabilityLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.bar {
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}

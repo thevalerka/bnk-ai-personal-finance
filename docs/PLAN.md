@@ -226,8 +226,19 @@ Hyperliquid trading (this section's Stage C) shipped early and out of phase
 order: a 2026-08-16 session pivot toward commission/referral revenue moved
 it ahead of P5 (Suggestion rail), and P6 (read-only wallet)/P7 (flagged
 execution) below are effectively done in one combined pass rather than two
-— testnet only, no mainnet path yet. Stages A/B (Solana wallet-connect/
-Jupiter RWA) remain unstarted and unscheduled; nothing here blocks on them.
+— testnet only, no mainnet path yet.
+
+Stage B shipped 2026-08-17 (docs/DECISIONS.md ADR-0029): xStocks
+tokenized-equity swaps via the Jupiter aggregator, plus Jupiter Lend
+stablecoin lending (the "fixed income" area, beyond this section's
+original scope) — both proxied through the backend rather than direct
+browser→vendor signing (Jupiter's API needs a secret key the browser
+can't hold), mainnet-only (no meaningful testnet for either product),
+kill-switched off by default via `JUPITER_TRADING_ENABLED`. Stage A
+(dedicated read-only Solana wallet view — balances/P&L, independent of
+xStocks/Lend) remains unstarted; the wallet-connect *plumbing* itself
+(`lib/solanaWallet.ts`, `components/SolanaWallet.tsx`) now exists as a
+side effect of Stage B and is shared by /xstocks and /lend.
 
 Non-custodial, permissionless, **client-side signing only**. The backend never sees a private key, never holds funds, never routes an order it did not receive from a user-signed transaction.
 

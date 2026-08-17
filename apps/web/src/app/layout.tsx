@@ -3,6 +3,7 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { ExplainPanelProvider } from "@/components/ExplainPanel";
 import { PanelPrefsProvider } from "@/components/PanelPrefs";
 import { WalletProvider } from "@/components/Wallet";
+import { SolanaWalletProvider } from "@/components/SolanaWallet";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -47,9 +48,11 @@ export default function RootLayout({
       </head>
       <body>
         <WalletProvider>
-          <PanelPrefsProvider>
-            <ExplainPanelProvider>{children}</ExplainPanelProvider>
-          </PanelPrefsProvider>
+          <SolanaWalletProvider>
+            <PanelPrefsProvider>
+              <ExplainPanelProvider>{children}</ExplainPanelProvider>
+            </PanelPrefsProvider>
+          </SolanaWalletProvider>
         </WalletProvider>
       </body>
     </html>

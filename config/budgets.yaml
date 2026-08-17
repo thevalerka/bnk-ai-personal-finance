@@ -53,3 +53,13 @@ rss_media:
 polymarket:
   capacity: 120
   window_seconds: 60
+
+# jup.ag public tier (docs/DECISIONS.md ADR-0029) — ~30rpm keyless, 60rpm
+# with a free registered x-api-key. Conservative shared number since we
+# can't tell at config-load time whether JUPITER_API_KEY is set; a real
+# breach here degrades to the last cached xStocks/lend-tokens list rather
+# than failing the request (same stale-cache pattern as every other
+# provider).
+jupiter:
+  capacity: 30
+  window_seconds: 60

@@ -20,6 +20,12 @@ export function Shell() {
         <Link href="/trade" className={styles.navLink}>
           Trade · testnet
         </Link>
+        <Link href="/xstocks" className={styles.navLink}>
+          xStocks
+        </Link>
+        <Link href="/lend" className={styles.navLink}>
+          Lend
+        </Link>
         <span>Architecture · soon</span>
         <span>Notes · soon</span>
       </nav>
