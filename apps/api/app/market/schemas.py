@@ -135,6 +135,11 @@ class Event(BaseModel):
 
 MarketGraphAssetClass = Literal["equity", "rates", "macro", "commodity", "crypto", "fx", "news"]
 MarketGraphEdgeKind = Literal["correlation", "lead_lag", "markov", "news"]
+# "daily_fallback": this node has no real intraday data anywhere in this
+# app's provider set (FRED is daily-only) — at an intraday timeframe it's
+# still showing its real latest daily bar/quote, not fabricated intraday
+# data (docs/DECISIONS.md ADR-0032).
+MarketGraphDataGranularity = Literal["native", "daily_fallback"]
 
 
 class MarketGraphNode(BaseModel):
@@ -146,6 +151,13 @@ class MarketGraphNode(BaseModel):
     change_pct: float | None = None
     dominance_score: float
     rank: int
+    data_granularity: MarketGraphDataGranularity = "native"
+    # Current realized volatility (annualized) / trailing-1-year historical
+    # volatility (annualized) — None when either side couldn't be computed
+    # from real data. ~1.0 means "trading about as volatile as its own
+    # 1-year norm"; None must not be presented as 1.0 (that would silently
+    # claim "normal" for a number that was never actually reachable).
+    volatility_ratio: float | None = None
 
 
 class MarketGraphEdge(BaseModel):
@@ -155,7 +167,14 @@ class MarketGraphEdge(BaseModel):
     kind: MarketGraphEdgeKind
 
 
+class MarketGraphCorrelation(BaseModel):
+    a: str
+    b: str
+    corr: float
+
+
 class MarketGraphSnapshot(BaseModel):
     computed_at: datetime
     nodes: list[MarketGraphNode] = []
     edges: list[MarketGraphEdge] = []
+    correlations: list[MarketGraphCorrelation] = []

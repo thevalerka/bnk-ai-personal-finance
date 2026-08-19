@@ -6,67 +6,106 @@
   height: 100%;
 }
 
-.svg {
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.timeframes {
+  display: flex;
+  gap: 4px;
+}
+
+.tfButton {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.tfButton:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tfButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.tfButtonActive,
+.tfButtonActive:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.errorNote {
+  font-size: 11px;
+  color: var(--negative);
+}
+
+.gridSvg {
   width: 100%;
   height: auto;
   flex: 1;
+  min-height: 320px;
 }
 
-.edge {
-  fill: none;
-}
-
-.edgeCorrelation {
-  stroke: var(--text-muted);
-  stroke-dasharray: 3 3;
-}
-
-.edgeLeadLag {
-  stroke: var(--accent);
-}
-
-.edgeMarkov {
-  stroke: var(--series-2);
-}
-
-.edgeNews {
-  stroke: var(--text-muted);
-  stroke-dasharray: 1 3;
-  stroke-linecap: round;
-}
-
-.edgeDimmed {
-  opacity: 0.12;
-}
-
-.node {
-  cursor: pointer;
+.cellRect {
   stroke: var(--surface-1);
-  stroke-width: 1.5;
+  stroke-width: 0.3;
+  cursor: pointer;
   outline: none;
-  transition: filter var(--transition-fast), opacity var(--transition-fast);
+  transition: filter var(--transition-fast);
 }
 
-.node:hover,
-.node:focus-visible {
-  filter: brightness(1.2);
+.cellRect:hover,
+.cellRect:focus-visible {
+  filter: brightness(1.12);
 }
 
-.nodeDimmed {
-  opacity: 0.35;
+.volGauge {
+  pointer-events: none;
 }
 
-.nodeLabel {
+.cellLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-weight: 700;
+  fill: var(--on-fill-text);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-linejoin: round;
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.cellChange {
+  font-family: var(--font-mono);
   font-weight: 600;
   fill: var(--on-fill-text);
   paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.4);
-  stroke-width: 2px;
+  stroke: rgba(0, 0, 0, 0.45);
   stroke-linejoin: round;
   pointer-events: none;
-  transition: opacity var(--transition-fast);
+  text-anchor: middle;
+}
+
+.cellBadge {
+  font-family: var(--font-mono);
+  font-size: 3px;
+  font-weight: 700;
+  fill: var(--on-fill-text);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 .legend {
@@ -93,23 +132,15 @@
 .legendSwatch {
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
-.legendSwatchDiamond {
-  width: 8px;
+.legendGradientBar {
+  width: 64px;
   height: 8px;
-  border-radius: 1px;
-  transform: rotate(45deg);
-  flex-shrink: 0;
-}
-
-.legendLine {
-  width: 16px;
-  height: 0;
-  border-top: 1.5px solid;
-  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, rgba(var(--negative-rgb), 0.9), var(--surface-2) 50%, rgba(var(--positive-rgb), 0.9));
 }
 
 .legendNote {
@@ -197,6 +228,12 @@
 
 .popupDeltaDown {
   color: var(--negative);
+}
+
+.popupNote {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: var(--space-2);
 }
 
 .popupEdges {

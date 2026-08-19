@@ -196,11 +196,18 @@ export function fetchLendTokensTeaser(): Promise<LendTokenTeaser[] | null> {
   return getJSON<LendTokenTeaser[]>("/jupiter/lend-tokens", 60);
 }
 
-// "Market drivers" graph (docs/DECISIONS.md ADR-0031) — correlation/lead-lag/
-// Markov-dominance + real breaking news across a 20-node cross-asset
-// universe, computed and cached server-side every 15 minutes.
+// "Market drivers" graph (docs/DECISIONS.md ADR-0031/0032) — correlation/
+// lead-lag/Markov-dominance + real breaking news across a 20-node
+// cross-asset universe, recomputed and cached server-side per timeframe
+// (15 minutes each).
 export type MarketGraphAssetClass = "equity" | "rates" | "macro" | "commodity" | "crypto" | "fx" | "news";
 export type MarketGraphEdgeKind = "correlation" | "lead_lag" | "markov" | "news";
+// "daily_fallback": this node (rates/VIX/WTI/FX — FRED is daily-only) has
+// no real intraday series anywhere in this app's provider set, so at an
+// intraday timeframe it's still showing its real latest daily bar/quote,
+// not fabricated intraday data.
+export type MarketGraphDataGranularity = "native" | "daily_fallback";
+export type MarketGraphTimeframe = "1d" | "4h" | "1h" | "15m" | "5m";
 
 export interface MarketGraphNode {
   id: string;
@@ -211,6 +218,11 @@ export interface MarketGraphNode {
   change_pct: number | null;
   dominance_score: number;
   rank: number;
+  data_granularity: MarketGraphDataGranularity;
+  // Current realized volatility / trailing-1-year historical volatility,
+  // both annualized. null when either side couldn't be computed from real
+  // data — must render as "no data", never default to 1.0 ("normal").
+  volatility_ratio: number | null;
 }
 
 export interface MarketGraphEdge {
@@ -220,10 +232,17 @@ export interface MarketGraphEdge {
   kind: MarketGraphEdgeKind;
 }
 
+export interface MarketGraphCorrelation {
+  a: string;
+  b: string;
+  corr: number;
+}
+
 export interface MarketGraphSnapshot {
   computed_at: string;
   nodes: MarketGraphNode[];
   edges: MarketGraphEdge[];
+  correlations: MarketGraphCorrelation[];
 }
 
 export function fetchMarketGraph(): Promise<MarketGraphSnapshot | null> {

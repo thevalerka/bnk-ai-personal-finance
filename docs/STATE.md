@@ -5,6 +5,106 @@ Newest entry first.
 
 ---
 
+## 2026-08-19 — Market Drivers: bubble graph replaced with a timeframe-selectable heatmap
+
+Same-day follow-up to the entry directly below. User asked to "ditch" the
+force-directed bubble graph for a treemap heatmap instead: block size =
+dominance, position clusters correlated instruments, color = change over a
+selectable timeframe (24H/4H/1H/15M/5M), and a translucent fill gauge =
+recent volatility vs. each instrument's own 1-year norm. Two scope
+questions resolved with the user before building (FRED's 8 daily-only
+nodes at an intraday timeframe; whether dominance/correlation recompute per
+timeframe) — full detail, including the exact volatility-annualization
+methodology, in `docs/DECISIONS.md` ADR-0032.
+
+**Backend:** `compute_market_graph` now takes a `tf` (`GET /market/graph?tf=`,
+one of `1d`/`4h`/`1h`/`15m`/`5m`, default `1d`) and recomputes the entire
+pipeline — correlation/lead-lag/Markov/dominance/news — at that
+granularity. FRED-backed nodes (rates/VIX/WTI/FX) always fetch real daily
+data regardless of `tf` (`data_granularity: "daily_fallback"` flag) since
+no provider here has real intraday data for them. Real annualized
+volatility (`volatility_ratio` field): each node's current-window return
+stdev, annualized by `sqrt(periods/year)`, divided by its own trailing-
+260-day daily stdev likewise annualized — `None` when either side isn't
+computable, never defaulted to "normal." Snapshot also now returns the
+full pairwise correlation matrix (`correlations`), not just the
+pre-pruned edge list. Cache key bumped and now keyed per `tf`
+(`market_graph:v2:{tf}`) — 5 independently-cached snapshots.
+
+**Frontend:** `MarketGraphChart.tsx`/`.test.tsx` deleted outright. New
+`MarketHeatmap.tsx` — three hand-rolled pure functions do the layout:
+`apportionCells` (largest-remainder apportionment, dominance → integer
+block counts summing to exactly 100×50=5000), `seriate` (greedy
+correlation-based 1D ordering), `squarify` (classic squarified-treemap
+algorithm turning that order into squarish, correlation-adjacent
+rectangles — not "1 line with 20 consecutive blocks", the failure mode the
+user explicitly called out). Cell color is red/green by change, scaled
+relative to the current snapshot's own max move (not a fixed clamp, so an
+intraday view with small real moves doesn't wash out); the volatility
+gauge is a semi-transparent bottom-up fill, exactly the user's spec
+(ratio 1.0 → half-filled); a "D" badge marks FRED daily-fallback cells
+whenever an intraday timeframe is selected. Click a cell for a popup with
+its real metrics and outgoing edges (same transparency habit as the bubble
+graph it replaces).
+
+**Verified locally:** `make test` (253 api, up from 238 — tf-parameter/
+volatility/FRED-fallback/dominance-normalization tests in `test_graph.py`;
+1 worker; 138 web, up from 123 — new `MarketHeatmap.test.tsx`, deleted
+`MarketGraphChart.test.tsx`) / `make lint` / `make typecheck` all green.
+Added defensive `?? []` guards around the two places the frontend iterates
+`snapshot.correlations`/`snapshot.edges` so a transitional/old-shape API
+response degrades instead of crashing — caught because the homepage's
+static prerender genuinely hit this: `next build` fetches `/market/graph`
+from the real `amt-api` at build time, which was still serving the
+pre-heatmap shape (no `correlations` field) until redeployed, so a local
+build failed at the prerender step until the API was updated first — same
+build-after-API ordering lesson as every prior deploy, this time blocking
+local verification itself rather than just live correctness.
+
+**Found and fixed two real bugs live, neither caught by the test suite**
+(full detail in `docs/DECISIONS.md` ADR-0032's "Found and fixed" section):
+(1) an intraday `tf` request fetched all 19 nodes' candles sequentially —
+fast individually, ~17s summed, and a live `curl` against it once hung
+past two minutes and made the API stop responding to *other* requests
+too. Fixed by parallelizing every fetch phase with `asyncio.gather`
+(~17s → ~3s on the same real endpoint). (2) Eyeballing the first live
+render (per the dataviz skill's own "render it and look at it" step) showed
+`NEWS_FLOW` occupying roughly half the entire grid — `_dominance` was
+min-max-normalizing real headline counts (tens) against real % moves
+(single digits) in one shared pool, so news volume swamped every price
+mover's score on any non-trivial news day. Fixed by normalizing each kind
+independently; re-verified live after also manually flushing the
+Redis-cached pre-fix `market_graph:v2:*` entries (a process restart alone
+doesn't clear Redis) — dominance spread out to a legible, real distribution
+across far more of the 20 nodes.
+
+**Deployed live** (vespersoul.com), on the user's go-ahead: `amt-api`
+restarted (new `/market/graph?tf=` + volatility/correlation fields, then
+again for the concurrency fix, then again for the dominance fix — three
+restarts total this pass, each following a real issue caught while
+verifying), `next build` run and `amt-web` restarted once the API was
+confirmed healthy, Redis-cache flushed once to clear pre-fix cached
+snapshots. Re-verified live via a real headless-browser pass across
+timeframes: 20 real cells rendering (correct dominance/color/volatility-
+gauge spread after the fix), 1H and 5M timeframe switches both load real
+data, clicking a cell opens a popup with real metrics and edges, zero
+console errors, screenshotted.
+
+**Not done / deliberately deferred:**
+- Not committed yet as of writing this entry — pending final "make test"
+  re-run after the two live-caught fixes above, then commit (same
+  uncommitted-work-until-explicitly-asked pattern as always).
+- `NEWS_FLOW_SIGNAL_CAP = 40.0` (the reference "busy news day" scale the
+  dominance fix introduced) is a reasoned default, not tuned against
+  multiple real days yet — worth revisiting once there's a sense of
+  whether `NEWS_FLOW` structurally sits near the cap most days (which
+  would make it a less useful signal) or genuinely varies.
+
+**Next:** unchanged — Phase 5 (Suggestion rail) or continued trading work,
+per the last several sessions' open call.
+
+---
+
 ## 2026-08-19 — SPY candlestick chart + Market Drivers graph (20-node correlation/lead-lag/Markov/news graph)
 
 Two-part user request in one message: a real candlestick SPY chart

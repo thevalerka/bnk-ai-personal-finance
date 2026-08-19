@@ -24,7 +24,12 @@ function candle(ts: string, close: number) {
   return { symbol: "SPY", ts, open: close, high: close, low: close, close, volume: 1, source: "alpaca" };
 }
 
-const emptyGraph: MarketGraphSnapshot = { computed_at: "2026-08-19T12:00:00Z", nodes: [], edges: [] };
+const emptyGraph: MarketGraphSnapshot = {
+  computed_at: "2026-08-19T12:00:00Z",
+  nodes: [],
+  edges: [],
+  correlations: [],
+};
 
 describe("SpyChart", () => {
   it("renders SPY's price, delta, and a candle chart", async () => {
@@ -70,6 +75,8 @@ describe("SpyChart", () => {
           change_pct: 0.55,
           dominance_score: 0.9,
           rank: 1,
+          data_granularity: "native",
+          volatility_ratio: 1.0,
         },
         {
           id: "XLK",
@@ -80,6 +87,8 @@ describe("SpyChart", () => {
           change_pct: 2.1,
           dominance_score: 0.8,
           rank: 2,
+          data_granularity: "native",
+          volatility_ratio: 1.2,
         },
         {
           id: "DGS10",
@@ -90,9 +99,12 @@ describe("SpyChart", () => {
           change_pct: -0.3,
           dominance_score: 0.6,
           rank: 3,
+          data_granularity: "native",
+          volatility_ratio: 0.9,
         },
       ],
       edges: [],
+      correlations: [],
     });
 
     render(await SpyChart());

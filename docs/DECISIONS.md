@@ -4,6 +4,180 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0032: Market drivers heatmap — replaces the bubble graph with a correlation-clustered, dominance-sized treemap; timeframe selection recomputes the full graph, including a real cross-timeframe volatility measure
+
+**Context:** Follow-up user request, same session as ADR-0031: "ditch" the
+force-directed bubble graph (`MarketGraphChart.tsx`) in favor of a treemap
+heatmap — block size = dominance, block position clusters correlated
+instruments together, color = change over a selectable timeframe (24H/4H/
+1H/15M/5M), and a translucent fill gauge = recent volatility relative to
+each instrument's own trailing-1-year norm. Two real constraints surfaced
+before building, both resolved with the user up front rather than assumed:
+
+1. **8 of the 20 nodes (UST yields, VIX, WTI, FX) are FRED-backed, and FRED
+   is daily-only** — no provider in this app has real intraday data for
+   them. Resolved: at any intraday timeframe those nodes freeze at their
+   real latest daily bar/quote (`data_granularity: "daily_fallback"` on the
+   node) with a visible "D" badge, rather than fabricating intraday numbers
+   or silently passing daily data off as 5-minute data.
+2. **Should dominance/correlation (which drive block size and adjacency)
+   recompute per timeframe, or stay on the existing robust daily
+   computation?** Resolved: recompute everything per timeframe, including
+   the correlation/lead-lag/Markov legs — the user chose full recompute
+   over keeping layout fixed, accepting the tradeoff that intraday
+   correlation windows are statistically thinner.
+
+**Decision — `compute_market_graph(router, tf)` now takes a timeframe**
+(`apps/api/app/market/graph.py`, one of `1d`/`4h`/`1h`/`15m`/`5m`).
+`_returns_by_ts` replaces the old `_returns_by_date` (keys by full
+`datetime` instead of `.date()` — the same function now correctly handles
+same-day intraday bars, which collapsing to `date()` would have silently
+merged into one). Each node's `NodeSeries` carries both a "current window"
+return series at the requested granularity (`TF_LIMITS`, same bar-count
+budget as `CandleChart.tsx`'s own timeframe buttons) and a separate
+always-daily 260-bar (~1 year) series for the historical-volatility
+baseline. FRED-backed nodes (`NodeSpec.is_fred_backed`) always fetch at
+`"1d"` regardless of the requested `tf` — confirmed via a test asserting
+the actual `(symbol, tf, limit)` calls a FRED node makes never include an
+intraday `tf`, while an equity/crypto node's do.
+
+**Decision — volatility is a real annualized ratio, not a fabricated
+gauge.** `_annualized_stdev(returns, tf) = stdev(returns) * sqrt(periods_per_year[tf])`
+— the standard sqrt-time volatility-scaling convention, needed because
+comparing raw 5-minute return stdev against raw daily return stdev isn't
+apples-to-apples. `PERIODS_PER_YEAR` uses a 24/7-calendar approximation for
+intraday timeframes (`365*24/tf_hours`) — genuinely correct for crypto
+(trades 24/7), an honest, documented simplification for equities (which
+don't). `volatility_ratio = current_annualized / hv_annualized`, `None`
+when either side isn't computable — the frontend must never default a
+missing ratio to `1.0` ("normal"), since that would misrepresent "couldn't
+measure" as "measured and it's average." The gauge fill itself
+(`volatilityFraction`, `MarketHeatmap.tsx`) is the user's literal spec:
+`clamp(ratio * 0.5, 0, 1)` — ratio 1.0 (as volatile as its own norm) fills
+the block halfway.
+
+**Decision — dominance's "today's move" input becomes tf-aware too.**
+`_fetch_change_pct`: at `tf == "1d"` or for a `daily_fallback` node, use the
+real live quote's `change_percent` (fresher than a possibly-lagged daily
+bar, same as before); for a native node at an intraday `tf`, use that
+node's own most recent bar's open→close move — both real numbers, just
+sourced from whichever real feed actually has them. The news lookback
+window (`NEWS_LOOKBACK_HOURS_BY_TF`) also shrinks with `tf` (12h at daily
+down to 30min at 5-minute) — "what's driving the last 5 minutes" should
+only weight genuinely recent headlines, a documented judgment call, not a
+provider limit.
+
+**Decision — the API now also returns the full pairwise correlation
+matrix** (`MarketGraphSnapshot.correlations`, new `MarketGraphCorrelation`
+schema), not just the already-thresholded top-4-per-node `edges` list —
+the frontend's clustering layout needs real distance values for every
+pair with enough common bars, not a pre-pruned directed edge list built
+for a different visualization. Cache key bumped to `market_graph:v2:{tf}`
+(new node fields + this new top-level field) and now keyed per timeframe —
+5 independently-cached, independently-computed snapshots server-side.
+
+**Decision — treemap layout is entirely frontend, pure functions, hand-
+rolled (no d3-hierarchy dependency)** — same "backend computes data,
+frontend computes layout" split as the bubble graph before it
+(`MarketHeatmap.tsx`):
+- **`apportionCells`** — largest-remainder (Hamilton) apportionment turns
+  each node's `dominance_score` into an integer block count, every node
+  guaranteed ≥1, the whole set summing to *exactly* `100 * 50 = 5000`
+  (literal user spec: "the total must be 100*50").
+- **`seriate`** — a greedy nearest-fragment 1D ordering (grow a chain by
+  always appending whichever remaining node is closest, by
+  `1 - |correlation|`, to either end) starting from the most-dominant node.
+  A pair with no computed correlation (common across timeframes, see the
+  FRED-gap and thin-intraday-sample notes above) defaults to distance 1
+  ("as far as fully uncorrelated") rather than crashing or being treated as
+  suspiciously close — honest degrade, not a special case.
+- **`squarify`** — the classic Bruls/Huizing/van Wijk squarified-treemap
+  algorithm over that fixed order: consecutive items land in the same row/
+  column, which is what turns the correlation-based ordering into spatial
+  adjacency (user spec: "the most correlated elements shall be near"), and
+  the aspect-ratio-greedy row growth is what keeps blocks squarish instead
+  of one 20-block strip (user's explicit complaint about the naive
+  approach). Verified with a synthetic-input test asserting max aspect
+  ratio stays under 10 for 20 equal-area blocks, versus ~90 for a naive
+  single-strip layout.
+
+**Decision — 3 grouped categorical hues carry over from the bubble graph
+(ADR-0031) unchanged for the "Breaking News" cell's identity, but color's
+main job here is different: change (red↔green), not asset class.** Cell
+fill is `rgba(var(--positive-rgb|--negative-rgb), alpha)` scaled by
+`|change_pct| / max(|change_pct|)` **within the current snapshot** — a
+fixed absolute clamp (e.g. ±3%, what `WorldMapChart.tsx` uses) would wash
+out an intraday view where every real move is under 0.5%, so intensity is
+relative to whatever's actually on screen at the selected timeframe
+instead. `NEWS_FLOW` gets a neutral wash (it has no price/change), not a
+fabricated red or green.
+
+**Found and fixed two real bugs during live verification, not caught by
+tests alone:**
+
+1. **A live request for an intraday `tf` stalled the whole API process.**
+   `_fetch_all_series` fetched each of the 19 nodes' candles *sequentially*
+   — fine at `tf=1d` (one fetch per node, one long-history call each), but
+   an intraday `tf` needs *two* real network round trips per native node
+   (current-window + a separate daily HV baseline). A live `curl` against
+   the deployed `/market/graph?tf=1h` hung past two minutes and started
+   returning connection failures on *other*, unrelated endpoints
+   (`/market/tape`) — the single-worker event loop wasn't deadlocked (0%
+   CPU, no traceback), just serialized behind ~30 sequential awaited HTTP
+   calls. Root-caused with a standalone script hitting the real providers
+   directly (`gateway.router.candles(...)`) and timing each call — every
+   *individual* call was fast (under 1.5s); the sum of ~30 of them
+   sequentially was the problem. Fixed by parallelizing every fetch phase
+   with `asyncio.gather` (`_fetch_all_series`, `_fetch_change_pct`,
+   `_fetch_news_counts`) — same real calls, concurrent instead of one-at-
+   a-time. Measured effect on the same real endpoint: intraday `tf` total
+   fetch time dropped from ~17s to ~3s, and the API restored to serving
+   other endpoints normally.
+2. **`_dominance` mixed two different units in one min-max pool.** `NEWS_
+   FLOW`'s "today" signal is a real headline count (typically tens);
+   every price node's is a real `%` move (typically low single digits).
+   Both were min-max-normalized together, which meant `NEWS_FLOW`'s raw
+   magnitude — just being numerically bigger, nothing about actual
+   newsworthiness — swamped every price node's score on any day with a
+   non-trivial news count. Invisible in the bubble graph (dominance only
+   set node *radius*, a mild visual effect); glaring on the heatmap, where
+   dominance is literal block *area* — caught by looking at a live render
+   (the dataviz skill's explicit "render it and look at it" step): `NEWS_
+   FLOW` occupied roughly half the entire grid, and 12+ of the other 19
+   nodes were reduced to slivers too small to read regardless of their
+   real price moves. Fixed (`_dominance`) by normalizing each kind
+   independently: price nodes' `%` moves against each other only, `NEWS_
+   FLOW`'s headline count against a fixed, documented reference scale
+   (`NEWS_FLOW_SIGNAL_CAP = 40.0`) — same "cap it, don't let it compete on
+   raw magnitude" treatment its own outgoing edge weights already got
+   (`NEWS_EDGE_CAP`). Regression test (`test_dominance_price_movers_are_
+   normalized_independently_of_news_volume`) asserts a price node's score
+   is now bit-for-bit identical regardless of how newsy the day is —
+   proving the coupling is gone, not just that today's specific numbers
+   look better. Re-verified live after the fix (and after manually
+   flushing the Redis-cached pre-fix `market_graph:v2:*` entries, which a
+   process restart alone doesn't clear): dominance spread from a single
+   ~0.11-max non-news node to a healthy ~0.5-max, several more nodes
+   rendering at a legible size — `NEWS_FLOW` still ranks #1 that day, now
+   for a real, undiluted reason (40 real headlines about SPY/QQQ/DIA in
+   the lookback window, confirmed via direct provider counts), not an
+   artifact of the unit mismatch.
+
+**Consequence:** `apps/api/tests/market/test_graph.py` grew to cover the
+new tf parameter end-to-end (FRED-fallback-vs-native fetch calls asserted
+directly against a call-recording provider double, an unknown-`tf`
+degrade-to-default test, a volatility-ratio-from-real-variance test) plus
+the existing pure-math tests updated for `_returns_by_ts`'s datetime keys.
+Frontend: `MarketGraphChart.tsx`/`.test.tsx` deleted outright (the "ditch"
+instruction); new `MarketHeatmap.tsx` + `.test.tsx` unit-test every pure
+layout function directly (`apportionCells` sums to exactly 5000 including
+a 20-tiny-node edge case, `squarify` covers every returned rectangle's
+area and the squarish-not-a-strip property, `seriate` places a
+manufactured close pair adjacent in the output) plus the component's
+click→popup interaction and the FRED-node daily-badge condition.
+
+---
+
 ## ADR-0031: Market drivers graph — correlation/lead-lag/Markov dominance over a 20-node cross-asset universe, plus real breaking news, computed and cached in the API (no worker/DB pipeline)
 
 **Context:** User asked for the SPY chart to link to "the day's main

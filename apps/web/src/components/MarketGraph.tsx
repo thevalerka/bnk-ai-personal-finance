@@ -1,13 +1,16 @@
 import { fetchMarketGraph } from "@/lib/market";
 import { Unavailable } from "./Block";
-import { MarketGraphChart } from "./MarketGraphChart";
+import { MarketHeatmap } from "./MarketHeatmap";
 
-// The "20 main nodes of the moment" (user request) — a graph over the
-// cross-asset universe this app already has real data for, with edges from
-// correlation/lead-lag/Markov-transition dominance plus real breaking news
-// (docs/DECISIONS.md ADR-0031). Server component fetches the (server-side
-// cached, 15min) snapshot; MarketGraphChart.tsx does the client-side
-// force-layout + interaction, same split as WorldMap.tsx/WorldMapChart.tsx.
+// The "20 main nodes of the moment" (user request) — a treemap heatmap over
+// the cross-asset universe this app already has real data for: block size
+// is dominance, block position clusters correlated instruments, color is
+// change over the selected timeframe, and a translucent fill gauge is
+// recent volatility vs. this node's own 1-year norm (docs/DECISIONS.md
+// ADR-0031/0032). Server component fetches the (server-side cached, 15min)
+// daily snapshot for first paint; MarketHeatmap.tsx does the client-side
+// layout + timeframe switching, same split as WorldMap.tsx/WorldMapChart.tsx
+// and SpyChart.tsx/CandleChart.tsx.
 export async function MarketGraph() {
   const snapshot = await fetchMarketGraph();
 
@@ -15,5 +18,5 @@ export async function MarketGraph() {
     return <Unavailable reason="Market drivers graph unavailable — not enough live data reachable yet." />;
   }
 
-  return <MarketGraphChart snapshot={snapshot} />;
+  return <MarketHeatmap initialSnapshot={snapshot} />;
 }

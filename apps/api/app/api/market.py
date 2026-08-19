@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ValidationError
 
 from app.market.dependencies import MarketGateway
+from app.market.graph import ALLOWED_TIMEFRAMES as ALLOWED_GRAPH_TIMEFRAMES
 from app.market.graph import compute_market_graph
 from app.market.providers.base import DateRange, ProviderError
 from app.market.router import MarketDataUnavailable, Router
@@ -210,14 +211,20 @@ async def _predictions(gateway: MarketGateway) -> list[PredictionMarket]:
     )
 
 
-async def _market_graph(gateway: MarketGateway) -> MarketGraphSnapshot:
+async def _market_graph(gateway: MarketGateway, tf: str) -> MarketGraphSnapshot:
     # Same cache-then-compute idiom as _cached_bypass_call above, adapted for
     # a single composite snapshot rather than a list of items — Cache.get/set
     # only speak list[dict], so the snapshot is wrapped/unwrapped as a
     # one-element list. No separate budget gate: compute_market_graph's own
     # Router.candles/quote/news calls already go through the Router's normal
-    # cache+budget discipline per symbol (docs/DECISIONS.md ADR-0031).
-    cache_key = "market_graph:v1"
+    # cache+budget discipline per symbol (docs/DECISIONS.md ADR-0031/0032).
+    # "v2": the node schema grew data_granularity/volatility_ratio and the
+    # snapshot grew correlations — a stale v1 cache entry would silently
+    # validate (new fields have defaults) but with those fields wrong/blank,
+    # so the key is versioned to force a fresh compute post-deploy, same
+    # precedent as ADR-0022's cache-key bump. Keyed by tf too — each
+    # timeframe is cached (and computed) independently.
+    cache_key = f"market_graph:v2:{tf}"
     cached = await gateway.cache.get(cache_key, fresh_ttl_seconds=900)
     if cached is not None and cached.is_fresh and cached.payload:
         try:
@@ -225,7 +232,7 @@ async def _market_graph(gateway: MarketGateway) -> MarketGraphSnapshot:
         except ValidationError:
             pass
 
-    snapshot = await compute_market_graph(gateway.router)
+    snapshot = await compute_market_graph(gateway.router, tf)
     if snapshot.nodes:
         await gateway.cache.set(cache_key, [snapshot.model_dump(mode="json")])
         return snapshot
@@ -450,8 +457,10 @@ async def get_earnings_calendar(request: Request) -> list[EarningsMarket]:
 
 
 @router.get("/graph")
-async def get_market_graph(request: Request) -> MarketGraphSnapshot:
-    snapshot = await _market_graph(_gateway(request))
+async def get_market_graph(request: Request, tf: str = "1d") -> MarketGraphSnapshot:
+    if tf not in ALLOWED_GRAPH_TIMEFRAMES:
+        tf = "1d"
+    snapshot = await _market_graph(_gateway(request), tf)
     if not snapshot.nodes:
         raise HTTPException(status_code=503, detail="market data unavailable")
     return snapshot

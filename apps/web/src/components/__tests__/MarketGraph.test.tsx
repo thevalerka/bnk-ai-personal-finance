@@ -21,18 +21,21 @@ const snapshot: MarketGraphSnapshot = {
       change_pct: 1.2,
       dominance_score: 0.9,
       rank: 1,
+      data_granularity: "native",
+      volatility_ratio: 1.1,
     },
   ],
   edges: [],
+  correlations: [],
 };
 
 describe("MarketGraph", () => {
-  it("renders the graph chart when a snapshot is reachable", async () => {
+  it("renders the heatmap when a snapshot is reachable", async () => {
     mockedFetchMarketGraph.mockResolvedValue(snapshot);
 
     render(await MarketGraph());
 
-    expect(screen.getByRole("img", { name: /market drivers graph/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /market drivers heatmap/i })).toBeInTheDocument();
   });
 
   it("shows an unavailable message when the graph is unreachable", async () => {
