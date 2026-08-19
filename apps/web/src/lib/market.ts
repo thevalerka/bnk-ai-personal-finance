@@ -195,3 +195,37 @@ export function fetchXStocksTeaser(): Promise<XStockTeaser[] | null> {
 export function fetchLendTokensTeaser(): Promise<LendTokenTeaser[] | null> {
   return getJSON<LendTokenTeaser[]>("/jupiter/lend-tokens", 60);
 }
+
+// "Market drivers" graph (docs/DECISIONS.md ADR-0031) — correlation/lead-lag/
+// Markov-dominance + real breaking news across a 20-node cross-asset
+// universe, computed and cached server-side every 15 minutes.
+export type MarketGraphAssetClass = "equity" | "rates" | "macro" | "commodity" | "crypto" | "fx" | "news";
+export type MarketGraphEdgeKind = "correlation" | "lead_lag" | "markov" | "news";
+
+export interface MarketGraphNode {
+  id: string;
+  label: string;
+  asset_class: MarketGraphAssetClass;
+  symbol: string;
+  last_price: number | null;
+  change_pct: number | null;
+  dominance_score: number;
+  rank: number;
+}
+
+export interface MarketGraphEdge {
+  source: string;
+  target: string;
+  weight: number;
+  kind: MarketGraphEdgeKind;
+}
+
+export interface MarketGraphSnapshot {
+  computed_at: string;
+  nodes: MarketGraphNode[];
+  edges: MarketGraphEdge[];
+}
+
+export function fetchMarketGraph(): Promise<MarketGraphSnapshot | null> {
+  return getJSON<MarketGraphSnapshot>("/market/graph", 900);
+}

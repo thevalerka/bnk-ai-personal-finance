@@ -4,6 +4,242 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0031: Market drivers graph — correlation/lead-lag/Markov dominance over a 20-node cross-asset universe, plus real breaking news, computed and cached in the API (no worker/DB pipeline)
+
+**Context:** User asked for the SPY chart to link to "the day's main
+drivers," which meant first building the thing that decides what a driver
+*is*: a graph over ~20 major instruments spanning every asset class this
+app already tracks, with edges from real correlation, lead/lag, and
+Markov-transition relationships — "what node is sending the waves to the
+others" — plus real breaking news, since "sometimes a breaking news is more
+powerful than any trend" (explicit user requirement). CLAUDE.md's
+non-negotiable still applies: every number has to trace back to a real
+provider response, so this had to be genuine computation over real
+already-fetched data, not a fabricated or hand-picked "drivers" list.
+
+**Decision — reuse existing capabilities, zero new provider integrations.**
+The 20-node universe (`apps/api/app/market/graph.py::NODE_SPECS`) is 9
+equity/sector ETFs (SPY/QQQ/DIA/XLK/XLF/XLE/XLY/XLI/XLV), 3 UST yields
+(DGS2/DGS10/DGS30), VIX + WTI crude, BTC + ETH, and 3 FX pairs
+(DEXJPUS/DEXUSEU/DEXUSUK) — every one of them already served by
+`equity_candles`/`macro_candles`/`crypto_candles` and their quote
+counterparts. A 20th node, `NEWS_FLOW`, is synthetic — it has no price —
+and represents real breaking-news volume/relevance instead.
+
+**Decision — three real statistical legs over 90 daily bars of returns,
+computed pairwise in plain Python (no numpy — 20 nodes × ~90 points doesn't
+need it, and this repo has avoided that dependency everywhere else):**
+1. **Correlation** — Pearson correlation of daily returns, undirected, the
+   "how are these normally related" backdrop.
+2. **Lead/lag** — `corr(A_t, B_t+1)` vs. `corr(B_t, A_t+1)`; whichever
+   direction is stronger gives the edge a direction (A "leads" B).
+3. **Markov dominance** — each node's daily return discretized into
+   down/flat/up (±0.5σ), then a conditional-information-gain measure (how
+   much knowing A's state today reduces the entropy of B's *next* state,
+   normalized to [0,1] by the max entropy of a 3-state variable) — catches
+   nonlinear lead/follow relationships correlation misses.
+
+Edges only ship past a threshold per leg (`CORRELATION_EDGE_THRESHOLD`=0.5,
+`LEAD_LAG_EDGE_THRESHOLD`=0.3, `MARKOV_EDGE_THRESHOLD`=0.15) and are pruned
+to each node's top 4 strongest outgoing edges, so the rendered graph stays
+legible instead of a ~190-edge hairball.
+
+**Decision — real breaking news as its own leg, deliberately NOT folded
+into the historical correlation/lag/Markov legs.** RSS-based feeds
+(`federal_reserve`/`regional_feds`/`rss_media`) don't reliably carry 90
+days of backfill, so building a long news-volume history for `NEWS_FLOW`
+would mean fabricating or silently truncating data — not acceptable under
+CLAUDE.md. Instead: equities/sector ETFs get a real per-symbol headline
+count via Finnhub's `equity_news` company-news feed (already supports an
+arbitrary ticker, including an ETF symbol, even though it'll legitimately
+return few/zero hits for a fund); everything else is matched against a
+small, explicit, hardcoded keyword map (`NodeSpec.news_keywords`, e.g.
+`DGS10: ("fed","rate","treasury","yield","fomc")`) over the same merged
+`macro_news`/`regional_fed_news`/`media_news` chains `/market/news` already
+fetches — real headline text, simple substring matching, no LLM
+involved. `NEWS_FLOW → node` edges are weighted by real headline count
+(capped at 10 for a weight of 1.0), so a single real, relevant breaking
+headline can visibly move a node's dominance *today* regardless of its
+long-run statistical relationships — the literal, honest answer to "a
+breaking news is more powerful than any trend." A real bug caught before
+shipping: the first pass silently seeded every keyword-matched node's
+headline count to `0` even when the merged-news fetch itself had failed
+(all three capabilities down), which made `NEWS_FLOW` look "reachable but
+quiet" instead of "couldn't check" — fixed by threading a
+`merged_reachable` flag through so `NEWS_FLOW` only appears in the graph
+when at least one real news call actually succeeded that cycle
+(`_fetch_news_counts`, `apps/api/tests/market/test_graph.py`'s
+"degrades_when_every_provider_is_down" test guards this).
+
+**Decision — dominance is a documented, transparent formula, not a black
+box:** for each node, min-max normalize (a) today's real move — `|change_
+percent|` for price nodes, real total headline count for `NEWS_FLOW` —
+against every other node's same-cycle value, and (b) that node's total
+outgoing leading/predictive edge weight (lead_lag + markov + news; NOT
+correlation, which is undirected and not a "this drives that" signal).
+`dominance = 0.5 * today_norm + 0.5 * outgoing_norm`. Ranked descending,
+that's "today's main drivers" — every component is inspectable via the
+frontend's per-node popup (`MarketGraphChart.tsx`), not just a single
+opaque score.
+
+**Decision — compute-and-cache inside the API, no worker or new Postgres
+table.** Considered a worker job (APScheduler, matching `docs/PLAN.md`
+§5.2's suggestion-rail precedent) writing a snapshot row workers/API could
+share, but that needs the worker to either duplicate provider/Router code
+or call the API over HTTP, plus a new table — real added surface for the
+same outcome. Instead `GET /market/graph` (`apps/api/app/api/market.py`)
+computes `compute_market_graph(gateway.router)` directly and caches the
+whole snapshot in Redis via the existing `Cache` class (`market_graph:v1`,
+15-minute freshness — matches the suggestion-rail cadence precedent without
+adopting its worker plumbing), wrapping/unwrapping the single composite
+object as a one-element list since `Cache.get/set` only speak
+`list[dict]`. Every underlying `Router.candles`/`quote`/`news` call inside
+`compute_market_graph` already goes through the Router's own per-provider
+cache+budget discipline, so no separate budget gate is needed at this
+layer — a full 20-node recompute is ~19 candle + ~19 quote + ~12 news calls
+per 15-minute cycle, negligible against every provider's existing budget
+(`config/budgets.yaml`).
+
+**Decision — frontend color: 3 grouped hues, not 7 raw asset classes.**
+Ran the dataviz skill's palette validator before picking colors: a
+same-hued categorical palette past 3 slots fails CVD separation on an
+all-pairs-visible chart like this one (many same-class dots on screen at
+once — a network graph behaves like a scatter/bubble chart here, not a
+5-bar-chart legend). `globals.css` gained 3 new tokens
+(`--graph-risk`/`--graph-macro`/`--graph-fx`, validated against this app's
+own light/dark surfaces, not the skill's reference surfaces) covering
+equity+crypto / rates+macro+commodity / fx. `NEWS_FLOW` is a singleton —
+only one ever exists — so it doesn't compete for a 4th categorical slot at
+all; it uses the existing `--accent` token plus a diamond marker (shape,
+not just color) instead. Every node also always shows a text label and a
+`<title>` tooltip, satisfying "identity never color alone" regardless.
+Edge kind (correlation/lead_lag/markov/news) gets its own dash pattern +
+color combination for the same reason.
+
+**Decision — hand-rolled force-directed layout, no d3-force dependency.**
+A one-shot, synchronous physics simulation (repulsion + spring edges +
+light centering, 260 ticks) run once per snapshot in a `useMemo` —
+`O(n² × ticks)` at n=20 is trivially cheap, and a static final layout is
+simpler to reason about and test than a continuously-animated one. Same
+"hand-rolled SVG, no charting library" discipline as every other chart in
+this repo except the one deliberate `lightweight-charts` exception (ADR-0030).
+
+**Consequence:** 106 `apps/api/tests/market/*` (was ~92 before this
+session — new `test_graph.py` covers the pure math with hand-checked
+values plus two `compute_market_graph` end-to-end tests against a
+synthetic Router double: one proving a deterministic leader ranks above
+flat noise, one proving total provider failure degrades to an empty
+snapshot, not a crash or fabricated data), `ruff`/`mypy --strict` clean.
+Frontend: `MarketGraphChart.test.tsx`/`MarketGraph.test.tsx` cover the
+degrade path and the click→popup→edge-breakdown interaction.
+**Deployed live** (vespersoul.com) on the user's go-ahead once everything
+above was green — `amt-api` restarted, `/market/graph` confirmed via direct
+curl returning all 20 nodes and 39 real computed edges with `NEWS_FLOW`
+ranked #1 that day off real headline volume; see STATE.md for the full
+live-verification pass.
+
+---
+
+## ADR-0030: SPY candlestick chart — `lightweight-charts` adopted for real zoom/pan, six timeframes including a new Alpaca `4h` mapping
+
+**Context:** User asked for the homepage SPY panel (`SpyChart.tsx`,
+previously a closing-price-only line chart via the hand-rolled
+`PriceHistoryChart.tsx`) to become a real candlestick chart: expandable
+(already free — the existing `PanelPrefs` expand/minimize/delete system
+already covers every panel), zoomable, draggable, a reset button, and six
+timeframes (1M/5M/15M/1H/4H/24H).
+
+**Decision — adopt `lightweight-charts` (TradingView's MIT-licensed
+canvas/SVG renderer, ~45kB) rather than hand-rolling OHLC zoom/pan.** Every
+existing chart in this repo (`PriceHistoryChart`, `YieldCurveChart`,
+`WorldMapChart`, `Sparkline`, `Heatmap`) is hand-rolled SVG with no
+charting library — real drag-to-pan plus smooth wheel-zoom by hand is a lot
+of fragile pointer-math code to get right, and this is exactly the kind of
+interaction a purpose-built library solves correctly out of the box. It's
+a pure renderer — it never talks to a data vendor, so nothing crosses the
+Gateway boundary (CLAUDE.md's "no vendor SDK past the Gateway" rule is
+about market-data vendors, not UI libraries) — same "scope a real
+dependency to where it's needed" precedent `viem`/`@nktkas/hyperliquid`/
+`@solana/web3.js` already established (ADR-0028/0029), just scoped to the
+homepage itself rather than a dedicated route this time, since that's
+where `SpyChart` lives. First-load JS for `/` grew from a 120kB baseline to
+176kB (`next build` output) — an honest, expected cost of a real
+charting engine, not a regression to chase down.
+
+**Decision — v5's `addSeries(CandlestickSeries, options)` API** (not the
+deprecated v4 `addCandlestickSeries()` shorthand — confirmed the installed
+version, 5.2.1, only ships the new series-type API by reading
+`node_modules/lightweight-charts/dist/typings.d.ts` directly rather than
+assuming from older docs/tutorials, several of which still show v4 syntax).
+
+**Decision — theme colors read from computed CSS custom properties, not
+hardcoded, and kept in sync on toggle.** Canvas `fillStyle` doesn't resolve
+`var(--x)` strings the way a stylesheet property does, so
+`CandleChart.tsx` reads `getComputedStyle(document.documentElement)` for
+`--positive`/`--negative`/`--text-muted`/`--border` at mount, and a
+`MutationObserver` on `<html>`'s `data-theme` attribute (the same attribute
+`ThemeToggle.tsx` already flips) re-applies updated colors via
+`chart.applyOptions()`/`series.applyOptions()` on toggle — confirmed live
+via a real toggle-and-screenshot pass (dark theme candle colors/grid all
+correctly reactive, zero console errors).
+
+**Decision — timeframe switching updates the existing series in place,
+not a chart teardown/remount.** The chart instance mounts once (`useEffect`
+with an empty dependency array, initial candles captured via a `useRef` so
+they don't need to be a reactive dependency); clicking a timeframe button
+calls a new browser-safe `fetchCandlesPublic` (`lib/marketClient.ts`, same
+`NEXT_PUBLIC_API_PUBLIC_URL` split `lib/attention.ts`/`lib/trading.ts`
+already established for client-side-only fetches, vs. `lib/market.ts`'s
+server-side `NEXT_PUBLIC_API_BASE_URL`) and calls `series.setData()` +
+`timeScale().fitContent()` on the existing instance — instant, no
+flash-of-empty-chart. "24H" maps to Alpaca's `1d` bar (`_TIMEFRAME_MAP` in
+`apps/api/app/market/providers/alpaca.py` gained a `"4h": "4Hour"` /
+`_MINUTES_PER_TF["4h"] = 240` entry — Alpaca's bars API accepts `4Hour`
+natively, confirmed via `respx`-mocked test asserting the actual
+`timeframe` query param sent).
+
+**Decision — a "Today's drivers" strip under the chart, sourced from the
+new `/market/graph` endpoint (ADR-0031), not a hardcoded list.**
+`SpyChart.tsx` now also fetches the graph snapshot server-side and renders
+the top 5 non-SPY nodes as chips: equity nodes link to `/stock/{symbol}`
+(existing detail page); everything else (rates/macro/fx/crypto/news) links
+to a `#market-graph` in-page anchor on the new Market Drivers panel
+(`PanelSlot.tsx` gained an optional `anchorId` prop for this — the id has
+to land on the actual CSS-grid cell `PanelSlot` renders, not a wrapping
+`<div>`, or the extra wrapper itself becomes an unstyled 1-column grid item
+and breaks the row layout — caught before shipping, not after).
+
+**Found and fixed one thing mid-verification:** the very first `next
+build`+deploy pass in this session accidentally overwrote the live `.next`
+directory `amt-web`'s already-running process was still serving from —
+same stale-build/RSC-mismatch risk class `docs/STATE.md`'s 2026-08-18 entry
+already flagged once before. Caught immediately (site still 200'd, but the
+running process and on-disk files disagreed), flagged to the user before
+doing anything further, then restarted `amt-web` on their go-ahead — same
+resolution as the prior occurrence. `amt-api` was left untouched at that
+point in the session; both it and a second `amt-web` rebuild+restart
+followed once the rest of the feature (ADR-0031) was verified and the user
+gave the go-ahead for a full deploy — see ADR-0031's consequence and
+STATE.md.
+
+**Consequence:** `lightweight-charts@5.2.1` added to `apps/web/package.json`
+(only new frontend dependency this session); `vitest.setup.ts` gained a
+`ResizeObserver` stub (jsdom doesn't implement it, same reasoning as the
+existing `IntersectionObserver`/`matchMedia` stubs) so `CandleChart.tsx`
+can be tested without a real browser. `CandleChart.test.tsx` mocks
+`lightweight-charts` entirely (jsdom has no real canvas rendering context)
+and asserts the component drives the library's API correctly — initial
+`setData`+`fitContent`, timeframe-click → correct `fetchCandlesPublic` args
+→ `setData` again, reset → `fitContent` again, a failed refetch surfaces an
+error note without crashing. Verified live via a real, unmocked headless-
+browser pass against `https://vespersoul.com` (not just `localhost` — same
+CORS-false-positive lesson STATE.md's 2026-08-18 entry already noted):
+candlestick rendering, 1H timeframe switch showing real intraday data,
+reset zoom, and a full dark-theme toggle all confirmed with zero console
+errors, screenshotted in both themes.
+
+---
+
 ## ADR-0029: xStocks (Jupiter/jup.ag) tokenized-equity swaps + Jupiter Lend stablecoin lending — backend proxies Jupiter's API rather than direct browser→Jupiter signing
 
 **Context:** Same session pivot as ADR-0028 (real trading), extended to two

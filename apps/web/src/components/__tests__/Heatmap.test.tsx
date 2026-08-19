@@ -19,6 +19,8 @@ describe("Heatmap", () => {
 
     render(await Heatmap());
 
+    expect(screen.getByText("Technology")).toBeInTheDocument();
+    expect(screen.getByText("Energy")).toBeInTheDocument();
     expect(screen.getByText("XLK")).toBeInTheDocument();
     expect(screen.getByText("+1.5%")).toBeInTheDocument();
     expect(screen.getByText("-0.8%")).toBeInTheDocument();

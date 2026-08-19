@@ -64,6 +64,20 @@ async def test_candles_handles_null_bars(http_client: httpx.AsyncClient) -> None
     assert candles == []
 
 
+@respx.mock
+async def test_candles_maps_4h_timeframe_to_alpacas_4hour_bars(
+    http_client: httpx.AsyncClient,
+) -> None:
+    route = respx.get("https://data.alpaca.markets/v2/stocks/AAPL/bars").mock(
+        return_value=httpx.Response(200, json=load_fixture("alpaca_bars.json"))
+    )
+    provider = AlpacaProvider(http_client, api_key="key", api_secret="secret")
+
+    await provider.candles("AAPL", tf="4h", limit=10)
+
+    assert route.calls.last.request.url.params["timeframe"] == "4Hour"
+
+
 async def test_news_and_calendar_raise_not_implemented(http_client: httpx.AsyncClient) -> None:
     provider = AlpacaProvider(http_client, api_key="key", api_secret="secret")
 

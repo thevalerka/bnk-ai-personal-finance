@@ -23,6 +23,17 @@ class StubIntersectionObserver implements IntersectionObserver {
 (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver ??=
   StubIntersectionObserver;
 
+// jsdom doesn't implement ResizeObserver either — CandleChart.tsx uses it
+// to keep the lightweight-charts instance sized to its container. Same
+// no-op-stub reasoning as IntersectionObserver above: tests care that
+// observing doesn't crash, not that jsdom computes real layout.
+class StubResizeObserver implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(window as unknown as { ResizeObserver: unknown }).ResizeObserver ??= StubResizeObserver;
+
 // jsdom doesn't implement matchMedia either — DynamicGrid uses it to gate
 // the attention engine's dynamic column spans to desktop widths. jsdom's
 // default viewport is 1024x768, so "matches: true" mirrors what a real

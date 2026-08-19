@@ -3,6 +3,7 @@ import { PersonaSwitcher } from "./PersonaSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 import { PanelRestoreTray } from "./PanelRestoreTray";
 import { PromptBar } from "./PromptBar";
+import { ResetViewButton } from "./ResetViewButton";
 import styles from "./Shell.module.css";
 
 // Persona switcher (phase 3, PersonaSwitcher.tsx / apps/api's
@@ -33,6 +34,7 @@ export function Shell() {
       <PanelRestoreTray />
       <ThemeToggle />
       <PersonaSwitcher />
+      <ResetViewButton />
     </header>
   );
 }

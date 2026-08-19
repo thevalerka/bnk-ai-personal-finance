@@ -37,6 +37,18 @@
   --series-2: #b8460d;
   --series-2-wash: rgba(184, 70, 13, 0.12);
 
+  /* MarketGraphChart.tsx node coloring — 3 grouped asset-class hues
+     (validated all-pairs, dataviz skill's categorical slots 1/2/3: blue/
+     orange/aqua), not 7 raw asset classes — a same-hued 7-way categorical
+     palette fails CVD separation past 3 slots on a scatter/bubble-like
+     chart (many same-class dots visible together). The lone "news" node
+     doesn't compete for a slot at all (only one ever exists) — it uses
+     --accent with a distinct marker shape instead (docs/DECISIONS.md
+     ADR-0031). */
+  --graph-risk: #2a78d6; /* equity + crypto (growth/risk-on) */
+  --graph-macro: #eb6834; /* rates + macro + commodity */
+  --graph-fx: #1baf7a; /* fx */
+
   /* -rgb triplets exist so Server Components that compute a fill's alpha
      from a data value (Heatmap.tsx, WorldMap.tsx) can still build a
      theme-reactive `rgba(var(--x-rgb), alpha)` inline style — a raw CSS
@@ -120,6 +132,10 @@
 
   --series-2: #e2712f;
   --series-2-wash: rgba(226, 113, 47, 0.16);
+
+  --graph-risk: #3987e5;
+  --graph-macro: #d95926;
+  --graph-fx: #199e70;
 
   --positive: #22d66b;
   --positive-rgb: 34, 214, 107;

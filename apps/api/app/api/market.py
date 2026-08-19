@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ValidationError
 
 from app.market.dependencies import MarketGateway
+from app.market.graph import compute_market_graph
 from app.market.providers.base import DateRange, ProviderError
 from app.market.router import MarketDataUnavailable, Router
 from app.market.schemas import (
@@ -14,6 +15,7 @@ from app.market.schemas import (
     EarningsMarket,
     Event,
     FinancialPeriod,
+    MarketGraphSnapshot,
     NewsItem,
     PredictionMarket,
     Quote,
@@ -206,6 +208,34 @@ async def _predictions(gateway: MarketGateway) -> list[PredictionMarket]:
         model=PredictionMarket,
         fetch=gateway.polymarket.probability,
     )
+
+
+async def _market_graph(gateway: MarketGateway) -> MarketGraphSnapshot:
+    # Same cache-then-compute idiom as _cached_bypass_call above, adapted for
+    # a single composite snapshot rather than a list of items — Cache.get/set
+    # only speak list[dict], so the snapshot is wrapped/unwrapped as a
+    # one-element list. No separate budget gate: compute_market_graph's own
+    # Router.candles/quote/news calls already go through the Router's normal
+    # cache+budget discipline per symbol (docs/DECISIONS.md ADR-0031).
+    cache_key = "market_graph:v1"
+    cached = await gateway.cache.get(cache_key, fresh_ttl_seconds=900)
+    if cached is not None and cached.is_fresh and cached.payload:
+        try:
+            return MarketGraphSnapshot.model_validate(cached.payload[0])
+        except ValidationError:
+            pass
+
+    snapshot = await compute_market_graph(gateway.router)
+    if snapshot.nodes:
+        await gateway.cache.set(cache_key, [snapshot.model_dump(mode="json")])
+        return snapshot
+
+    if cached is not None and cached.payload:
+        try:
+            return MarketGraphSnapshot.model_validate(cached.payload[0])
+        except ValidationError:
+            pass
+    return snapshot
 
 
 async def _earnings_calendar(gateway: MarketGateway) -> list[EarningsMarket]:
@@ -417,3 +447,11 @@ async def get_earnings_calendar(request: Request) -> list[EarningsMarket]:
     if not calendar:
         raise HTTPException(status_code=503, detail="market data unavailable")
     return calendar
+
+
+@router.get("/graph")
+async def get_market_graph(request: Request) -> MarketGraphSnapshot:
+    snapshot = await _market_graph(_gateway(request))
+    if not snapshot.nodes:
+        raise HTTPException(status_code=503, detail="market data unavailable")
+    return snapshot

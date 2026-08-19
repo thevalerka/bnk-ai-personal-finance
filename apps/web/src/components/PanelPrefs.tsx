@@ -14,6 +14,8 @@ const STORAGE_KEY = "amt-panel-prefs";
 // to list a deleted panel's name without that panel being mounted
 // anywhere to ask.
 export const PANEL_REGISTRY: { id: string; title: string }[] = [
+  { id: "spy_chart", title: "SPY" },
+  { id: "market_overview", title: "Market Overview" },
   { id: "quotes", title: "Quotes" },
   { id: "yield_curve", title: "US Treasury Yield Curve" },
   { id: "heatmap", title: "Sector Heatmap" },
@@ -28,6 +30,7 @@ export const PANEL_REGISTRY: { id: string; title: string }[] = [
   { id: "forex", title: "Forex" },
   { id: "predictions", title: "Prediction Markets" },
   { id: "earnings_calendar", title: "Earnings Calendar" },
+  { id: "market_graph", title: "Market Drivers" },
 ];
 
 interface PanelPrefsContextValue {

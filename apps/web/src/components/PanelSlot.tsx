@@ -15,11 +15,17 @@ export function PanelSlot({
   id,
   title,
   spanClassName,
+  anchorId,
   children,
 }: {
   id: string;
   title: string;
   spanClassName: string;
+  /** Optional DOM id on the grid cell itself (not the PanelSlot wrapper),
+   * so an in-page link (e.g. SpyChart.tsx's driver strip) can scroll a
+   * reader straight to this panel regardless of its current expand/icon
+   * state. */
+  anchorId?: string;
   children: ReactNode;
 }) {
   const { state } = usePanelState(id);
@@ -28,7 +34,7 @@ export function PanelSlot({
 
   if (state === "icon") {
     return (
-      <div style={{ gridColumn: "span 2" }}>
+      <div id={anchorId} style={{ gridColumn: "span 2" }}>
         <PanelIconChip id={id} title={title} />
       </div>
     );
@@ -36,7 +42,7 @@ export function PanelSlot({
 
   const style: CSSProperties | undefined = state === "expanded" ? { gridColumn: "1 / -1" } : undefined;
   return (
-    <div className={state === "expanded" ? undefined : spanClassName} style={style}>
+    <div id={anchorId} className={state === "expanded" ? undefined : spanClassName} style={style}>
       {children}
     </div>
   );

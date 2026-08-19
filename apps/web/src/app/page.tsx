@@ -9,10 +9,12 @@ import { YieldCurve } from "@/components/YieldCurve";
 import { Heatmap } from "@/components/Heatmap";
 import { NewsList } from "@/components/NewsList";
 import { EconomicCalendar } from "@/components/EconomicCalendar";
-import { PredictionOfDay } from "@/components/PredictionOfDay";
+import { SpyChart } from "@/components/SpyChart";
+import { MarketOverview } from "@/components/MarketOverview";
 import { Forex } from "@/components/Forex";
 import { PredictionMarkets } from "@/components/PredictionMarkets";
 import { EarningsCalendar } from "@/components/EarningsCalendar";
+import { MarketGraph } from "@/components/MarketGraph";
 import { XStocksTeaser } from "@/components/XStocksTeaser";
 import { LendTeaser } from "@/components/LendTeaser";
 import styles from "./page.module.css";
@@ -43,26 +45,38 @@ export default function Home() {
       </Suspense>
 
       <div className={styles.dashboard}>
+        <PanelSlot id="spy_chart" title="SPY" spanClassName={styles.spyChart}>
+          <Suspense fallback={<BlockSkeleton title="SPY" minHeight={340} />}>
+            <Block id="spy_chart" title="SPY">
+              <SpyChart />
+            </Block>
+          </Suspense>
+        </PanelSlot>
+
         <PanelSlot
           id="earnings_calendar"
           title="Earnings Calendar"
           spanClassName={styles.earningsCalendar}
         >
-          <Suspense fallback={<BlockSkeleton title="Earnings Calendar" minHeight={420} />}>
+          <Suspense fallback={<BlockSkeleton title="Earnings Calendar" minHeight={340} />}>
             <Block id="earnings_calendar" title="Earnings Calendar" source="Polymarket">
               <EarningsCalendar />
             </Block>
           </Suspense>
         </PanelSlot>
 
-        <PanelSlot
-          id="prediction_of_day"
-          title="Prediction of the Day"
-          spanClassName={styles.predictionOfDay}
-        >
-          <Suspense fallback={<BlockSkeleton title="Prediction of the Day" minHeight={420} />}>
-            <Block id="prediction_of_day" title="Prediction of the Day" source="Polymarket">
-              <PredictionOfDay />
+        <PanelSlot id="market_overview" title="Market Overview" spanClassName={styles.marketOverview}>
+          <Suspense fallback={<BlockSkeleton title="Market Overview" minHeight={340} />}>
+            <Block id="market_overview" title="Market Overview" source="Polymarket">
+              <MarketOverview />
+            </Block>
+          </Suspense>
+        </PanelSlot>
+
+        <PanelSlot id="market_graph" title="Market Drivers" spanClassName={styles.marketGraph} anchorId="market-graph">
+          <Suspense fallback={<BlockSkeleton title="Market Drivers" minHeight={420} />}>
+            <Block id="market_graph" title="Market Drivers" source="Computed">
+              <MarketGraph />
             </Block>
           </Suspense>
         </PanelSlot>

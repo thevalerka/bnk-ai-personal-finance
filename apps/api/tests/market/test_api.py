@@ -418,3 +418,31 @@ def test_earnings_calendar_endpoint_returns_503_when_unreachable(redis: Redis) -
         response = client.get("/market/earnings-calendar")
 
         assert response.status_code == 503
+
+
+def test_market_graph_endpoint_returns_503_when_everything_is_unreachable(redis: Redis) -> None:
+    with TestClient(app) as client:
+        down = ProviderError("down")
+        _install_fake_gateway(
+            redis,
+            {
+                "finnhub": FakeProvider("finnhub", error=down),
+                "alpaca": FakeProvider("alpaca", error=down),
+                "binance": FakeProvider("binance", error=down),
+                "hyperliquid": FakeProvider("hyperliquid", error=down),
+                "fred": FakeProvider("fred", error=down),
+                "federal_reserve": FakeProvider("federal_reserve", error=down),
+                "treasury": FakeProvider("treasury", error=down),
+                "regional_feds": FakeProvider("regional_feds", error=down),
+                "sec_edgar": FakeProvider("sec_edgar", error=down),
+                "rss_media": FakeProvider("rss_media", error=down),
+            },
+        )
+
+        response = client.get("/market/graph")
+
+        # FakeProvider's candles() always returns exactly 1 bar, below
+        # compute_market_graph's own 20-bar minimum — same "no real signal"
+        # outcome as every provider being down, exercised via the real chain
+        # wiring rather than graph.py's dedicated synthetic-data tests.
+        assert response.status_code == 503

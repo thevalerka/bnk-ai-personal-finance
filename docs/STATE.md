@@ -5,6 +5,201 @@ Newest entry first.
 
 ---
 
+## 2026-08-19 — SPY candlestick chart + Market Drivers graph (20-node correlation/lead-lag/Markov/news graph)
+
+Two-part user request in one message: a real candlestick SPY chart
+(zoomable/draggable/reset/6 timeframes) linking to "the day's main
+drivers," and the thing that computes what a driver *is* — a graph over 20
+major cross-asset instruments with edges from real correlation, lead/lag,
+Markov-transition dominance, and breaking news. Full detail (methodology,
+dependency choice, every tradeoff) in `docs/DECISIONS.md` ADR-0030/0031.
+Clarified scope with the user up front (chart engine, compute/cache
+architecture, node universe + explicit news integration) before building.
+
+**Backend:** `apps/api/app/market/graph.py` (new) — 20-node universe
+(9 equity/sector ETFs, 3 UST yields, VIX + WTI, BTC + ETH, 3 FX pairs, all
+already-wired capabilities/providers, zero new provider code), 90-day daily
+Pearson correlation + lag-1 cross-correlation (directional "leads") + a
+3-state Markov conditional-information-gain measure (nonlinear lead/follow
+signal), plus a synthetic `NEWS_FLOW` node fed by real Finnhub per-symbol
+headlines (equities) and a keyword-matched merged news feed (everything
+else) — deliberately excluded from the historical legs (RSS feeds don't
+reliably backfill 90 days) so news edges are honestly today-only. Dominance
+= transparent 50/50 blend of today's real move/headline-count (normalized)
+and outgoing leading-edge weight, ranked descending. New `MarketGraphNode`/
+`MarketGraphEdge`/`MarketGraphSnapshot` schemas, `GET /market/graph`
+(15-minute Redis-cached via the existing `Cache` class — no new worker job,
+no new Postgres table; every underlying Router call already carries its
+own budget/cache discipline). `alpaca.py` gained a `4h → "4Hour"` timeframe
+mapping.
+
+**Frontend:** `lightweight-charts@5.2.1` added (first new frontend
+dependency since Hyperliquid/Jupiter's web3 libs) — `CandleChart.tsx`
+(client), real candlestick rendering with native zoom/pan, a timeframe row
+(1M/5M/15M/1H/4H/24H → Alpaca `tf` values, switching updates the existing
+series in place via a new browser-safe `fetchCandlesPublic`,
+`lib/marketClient.ts`), a "Reset zoom" button, theme-reactive colors (reads
+CSS custom properties + a `MutationObserver` on `data-theme` so dark-mode
+toggling updates the chart live). `SpyChart.tsx` now also fetches
+`/market/graph` and renders a "Today's drivers" chip strip underneath the
+chart — equities link to `/stock/{symbol}`, everything else scrolls to the
+new full-graph panel via an in-page anchor. New `MarketGraph.tsx` +
+`MarketGraphChart.tsx` — a hand-rolled SVG force-directed layout (one-shot
+physics simulation, no d3 dependency), click a node for a popup with its
+dominance breakdown and real outgoing edges, registered as a new full-width
+homepage panel (`market_graph` in `PanelPrefs.tsx`'s registry, so
+expand/minimize/delete work like every other panel). Ran the dataviz
+skill's palette validator before choosing node colors: 3 grouped hues
+(equity+crypto / rates+macro+commodity / fx — new `--graph-risk`/
+`--graph-macro`/`--graph-fx` tokens in `globals.css`, validated against
+this app's own light/dark surfaces) rather than 7 raw per-asset-class hues,
+which fails CVD separation past 3 slots on an all-pairs-visible chart like
+this one; the singleton `NEWS_FLOW` node uses `--accent` + a diamond shape
+instead of competing for a hue slot.
+
+**Found and fixed 2 real bugs before shipping:** (1) `_fetch_news_counts`
+originally seeded every keyword-matched node's headline count to `0` even
+when the merged-news fetch itself had failed entirely, which made
+`NEWS_FLOW` look "checked, found nothing" instead of "couldn't check" —
+fixed by threading a `merged_reachable` flag through so `NEWS_FLOW` only
+ever appears when at least one real news call actually succeeded that
+cycle. (2) A first attempt at giving the new Market Drivers panel a
+`#market-graph` anchor wrapped `PanelSlot` in an extra `<div id="...">` —
+since `.dashboard` is a CSS grid, only *direct* children get a `grid-
+column` span, so that wrapper became an unstyled 1-column grid item and
+broke the row layout; fixed by adding an `anchorId` prop to `PanelSlot`
+itself so the id lands on the actual grid cell.
+
+**Verified locally:** `make test` (238 api, up from 219 — +19, mostly
+`test_graph.py`'s pure-math + synthetic-Router tests; 1 worker; 123 web, up
+from 111 — +12, `CandleChart`/`MarketGraph`/`MarketGraphChart` tests plus
+`SpyChart.test.tsx` updates) / `make lint` / `make typecheck` / `next
+build` all green. First-load JS for `/` grew 120kB → 176kB (`lightweight-
+charts`, an accepted real cost, not a regression).
+
+**Found and fixed a real live-process mismatch while verifying (same class
+as the 2026-08-18 entry's):** a local `next build` run for verification
+overwrote the live `.next` directory `amt-web`'s already-running process
+was still serving from. Caught immediately (site still 200'd, but on-disk
+files and the running process disagreed), flagged to the user before
+touching anything else, then restarted `amt-web` on their explicit
+go-ahead. Verified live post-restart via a real, unmocked headless-browser
+pass against `https://vespersoul.com`: candlestick renders correctly, 1H
+timeframe switch shows real intraday data, reset zoom works, dark theme
+toggle updates the chart's colors live, zero console errors, screenshotted
+in both themes.
+
+**Deployed live** (vespersoul.com), on the user's explicit go-ahead once
+everything above was green: `amt-api` restarted first (picks up
+`/market/graph` and the Alpaca `4h` mapping), confirmed via direct curl —
+all 20 nodes present (9 equity/sector ETFs, 3 UST yields, VIX, WTI, BTC,
+ETH, 3 FX pairs, `NEWS_FLOW`) with 39 real computed edges, `NEWS_FLOW`
+ranked #1 that day off real headline volume — then `amt-web` rebuilt
+against the now-live API and restarted, same build-after-API ordering
+lesson as the 2026-08-15/17 entries. Re-verified live via a real headless-
+browser pass: Market Drivers panel renders all 20 nodes, clicking
+`NEWS_FLOW` opens a popup showing its real dominance score (1.00) and its
+actual top outgoing edges ("mentioned in headlines about S&P 500 (SPY)
+0.50", "...Nasdaq 100 (QQQ) 0.50", "...Dow 30 (DIA) 0.40"), and `SpyChart`'s
+driver strip shows real ranked chips (Breaking News, Dow 30, Financials,
+Healthcare, Technology) — zero console errors, screenshotted.
+
+**Not done / deliberately deferred:**
+- **Not committed** — same uncommitted-work backlog pattern as several
+  recent sessions (`git status` before starting anything next session).
+- No node/edge count tuning based on real production data yet (thresholds
+  `CORRELATION_EDGE_THRESHOLD`/`LEAD_LAG_EDGE_THRESHOLD`/
+  `MARKOV_EDGE_THRESHOLD` in `graph.py` are reasoned defaults, not
+  calibrated against how the real 20-node universe actually behaves once
+  live).
+
+**Next:** unchanged — Phase 5 (Suggestion rail) or continued trading work,
+per the last several sessions' open call.
+
+---
+
+## 2026-08-18 — Sector Heatmap sector names, Reset view button, homepage first row reordered
+
+Three UI-only asks in one message, no backend changes.
+
+**Sector Heatmap** (`Heatmap.tsx`): cells were labelled only by their raw
+SPDR ETF ticker (XLK, XLB, ...) — incomprehensible to anyone who doesn't
+have that lineup memorized (user feedback). Added a `SECTOR_NAMES` map;
+each cell now shows the real sector name ("Technology", "Financials", ...)
+as the primary label, ticker kept underneath in smaller/muted text for
+whoever does know it, tooltip updated to match.
+
+**Reset view button** (`ResetViewButton.tsx`, new): a dedicated, always-
+visible top-right header control (next to `PersonaSwitcher`, last in the
+flex row `PromptBar`'s `flex:1` pushes rightward) — distinct from
+`PersonaSwitcher`'s "View as: Default" option, which does the same backend
+reset but is buried one click inside a dropdown. Clears both halves of a
+visitor's accumulated state: `POST /profile/reset` (existing endpoint,
+already used by `PersonaSwitcher`) for the interest vector, plus
+`localStorage.removeItem("amt-panel-prefs")` for manual panel expand/icon/
+delete overrides (`PanelPrefs.tsx`) — then reloads.
+
+**Homepage first row reordered** (user spec: SPY candle chart → Earnings
+Calendar → Market Overview): `SpyChart.tsx` (new) — SPY quote + 90-day
+daily candles, reusing the same `fetchQuote`/`fetchCandles`/
+`PriceHistoryChart` calls the stock detail page already makes, zero new
+backend. `MarketOverview.tsx` (new) — three sections: Market Status (SPY/
+QQQ/DIA/BTC quotes), Top Prediction (embeds `PredictionOfDay`'s resolved
+output — see note below), Breaking · Polymarket (top 3 `fetchPredictions()`
+entries). The standalone "Prediction of the Day" panel that used to share
+this row is gone; its component is unchanged and now only rendered inside
+`MarketOverview`. `page.module.css`: `.earningsCalendar` span 7→4,
+`.predictionOfDay` removed, `.spyChart`/`.marketOverview` added at span 4
+each (even 3-way desktop split). Both new panels added to
+`PanelPrefs.tsx`'s `PANEL_REGISTRY` (`spy_chart`/`market_overview`) so
+delete/restore works like every other panel.
+
+**Found and fixed one thing before it shipped:** `MarketOverview.tsx`
+initially rendered `<PredictionOfDay />` as a not-yet-awaited JSX child of
+another async Server Component. That composition only actually resolves
+under Next's own RSC render pipeline — under a plain `render()` call
+(i.e. `MarketOverview`'s own vitest test, using this repo's established
+`render(await Component())` pattern) it surfaced as "`<PredictionOfDay>`
+is an async Client Component" and rendered an empty tree. Fixed by
+`await`ing `PredictionOfDay()` inside `MarketOverview` alongside its other
+`Promise.all` fetches and interpolating the resolved element directly —
+composable everywhere, not just under Next's runtime.
+
+**Verified locally:** `make test` web suite (111, up from 105) / eslint /
+`tsc --noEmit` / `next build` all green, bundle size unchanged (120 kB
+first load).
+
+**Deploy — found and fixed a real live-process/build mismatch while
+verifying:** discovered mid-session that `localhost:3000`/`:8100` weren't
+a throwaway dev instance — they're the actual `amt-web`/`amt-api` systemd
+services serving vespersoul.com from this same working tree. The `next
+build` run for local verification overwrote the live `.next` directory
+while the old `amt-web` process was still running against it (same stale-
+chunk/RSC-mismatch risk class this repo's docs already called out once
+before). Site was still returning 200s at the time it was caught; flagged
+to the user before doing anything further, then restarted `amt-web` on
+their go-ahead (`amt-api` untouched — no backend changes this session).
+Confirmed clean restart (`✓ Ready` in the unit's log, no errors) and
+re-verified live via a scratch Playwright screenshot against
+`https://vespersoul.com` (not `localhost:3000` — hitting the built app by
+IP/localhost trips the production API's CORS allowlist, a false-positive
+red herring caught along the way): first row shows SPY chart → Earnings
+Calendar → Market Overview in order (Market Overview's Top Prediction
+correctly showing an honest "nothing resolves in 24h" degrade at
+verification time), Sector Heatmap shows real sector names, Reset view
+button present top-right and clickable with zero console errors.
+
+**Not done:** no `docs/DECISIONS.md` ADR — none of the three changes
+involved an architectural choice, just UI/labeling/layout. Not committed
+(uncommitted per this session, same backlog pattern as other recent
+sessions — see `git status`).
+
+**Next:** open call for the user — Phase 5 (Suggestion rail), resume
+Hyperliquid mainnet work, or continue deepening trading, per the last
+several sessions' unresolved "next" note.
+
+---
+
 ## 2026-08-17 — xStocks (Jupiter) + Jupiter Lend stablecoin lending, homepage: World Map → Prediction of the Day
 
 Session pivot away from Hyperliquid (paused, not touched this session) to

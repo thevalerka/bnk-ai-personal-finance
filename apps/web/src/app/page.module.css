@@ -37,17 +37,24 @@
   align-self: start;
 }
 
-/* Shares the first row with the Earnings Calendar (user request) — replaced
-   World Map in this slot. 100% below desktop still, since it's the most
-   worth full-width real estate on a narrow screen. */
-.predictionOfDay {
-  grid-column: span 5;
+/* First row (user request): SPY chart, Earnings Calendar, Market Overview —
+   an even 3-way split of the 12-column grid. */
+.spyChart {
+  grid-column: span 4;
 }
 
-/* First thing on the page (user request) — takes the larger share of the
-   first row, World Map takes the rest. */
 .earningsCalendar {
-  grid-column: span 7;
+  grid-column: span 4;
+}
+
+.marketOverview {
+  grid-column: span 4;
+}
+
+/* Market Drivers graph (docs/DECISIONS.md ADR-0031) — the 20-node graph
+   wants full width to stay legible, so it gets its own row. */
+.marketGraph {
+  grid-column: span 12;
 }
 
 /* Forex + Prediction Markets share a row — 7 currency-pair tiles want more
@@ -92,8 +99,12 @@
   .mostTraded {
     grid-column: span 6;
   }
-  .predictionOfDay,
-  .earningsCalendar {
+  .spyChart,
+  .earningsCalendar,
+  .marketOverview {
+    grid-column: span 6;
+  }
+  .marketGraph {
     grid-column: span 6;
   }
   .forex,
@@ -114,8 +125,10 @@
   .newsList,
   .calendar,
   .mostTraded,
-  .predictionOfDay,
+  .spyChart,
   .earningsCalendar,
+  .marketOverview,
+  .marketGraph,
   .forex,
   .predictions,
   .xstocks,

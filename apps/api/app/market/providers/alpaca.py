@@ -7,8 +7,15 @@ from app.market.schemas import Candle, Event, NewsItem, Quote
 
 BASE_URL = "https://data.alpaca.markets/v2"
 
-_TIMEFRAME_MAP = {"1m": "1Min", "5m": "5Min", "15m": "15Min", "1h": "1Hour", "1d": "1Day"}
-_MINUTES_PER_TF = {"1m": 1, "5m": 5, "15m": 15, "1h": 60}
+_TIMEFRAME_MAP = {
+    "1m": "1Min",
+    "5m": "5Min",
+    "15m": "15Min",
+    "1h": "1Hour",
+    "4h": "4Hour",
+    "1d": "1Day",
+}
+_MINUTES_PER_TF = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "4h": 240}
 _TRADING_MINUTES_PER_DAY = 390  # NYSE 9:30-16:00 ET
 
 

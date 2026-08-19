@@ -13,13 +13,13 @@
 }
 
 .cell {
-  flex: 1 1 88px;
+  flex: 1 1 108px;
   border-radius: var(--radius-sm);
   padding: var(--space-2);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   color: var(--on-fill-text);
   cursor: default;
   transition: transform var(--transition-fast), filter var(--transition-fast);
@@ -32,9 +32,16 @@
   z-index: 1;
 }
 
-.symbol {
+.name {
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
+}
+
+.symbol {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  opacity: 0.75;
 }
 
 .pct {

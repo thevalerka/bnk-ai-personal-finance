@@ -131,3 +131,31 @@ class Event(BaseModel):
     source: str
     tickers: list[str] = []
     topics: list[str] = []
+
+
+MarketGraphAssetClass = Literal["equity", "rates", "macro", "commodity", "crypto", "fx", "news"]
+MarketGraphEdgeKind = Literal["correlation", "lead_lag", "markov", "news"]
+
+
+class MarketGraphNode(BaseModel):
+    id: str
+    label: str
+    asset_class: MarketGraphAssetClass
+    symbol: str
+    last_price: float | None = None
+    change_pct: float | None = None
+    dominance_score: float
+    rank: int
+
+
+class MarketGraphEdge(BaseModel):
+    source: str
+    target: str
+    weight: float
+    kind: MarketGraphEdgeKind
+
+
+class MarketGraphSnapshot(BaseModel):
+    computed_at: datetime
+    nodes: list[MarketGraphNode] = []
+    edges: list[MarketGraphEdge] = []
