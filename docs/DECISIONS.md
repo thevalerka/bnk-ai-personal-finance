@@ -4,6 +4,36 @@ ADR-style log: context → decision → consequence. Newest first.
 
 ---
 
+## ADR-0038: Dropped `.ratx.example` templates; `*.ovpn` added to `.gitignore`
+
+**Context:** User found `.ratx.example` (root and `apps/web/`) publicly
+visible on GitHub and flagged it as defeating the point of ADR-0010 — that
+ADR's own rationale is that `.ratx` isn't cryptographic protection, only a
+way to dodge an opportunistic scanner's `.env` guess, and a tracked
+`.ratx.example` advertises the exact real filename to look for. Separately,
+three untracked `.ovpn` (OpenVPN config, often embeds private keys/certs)
+files were sitting in the repo root with no `.gitignore` rule, so a future
+`git add -A` could sweep one in. No secret values were ever actually
+committed in either case — verified via `git log --all` across every
+tracked `.ratx*`/`.ovpn` path and diff content; only blank-valued templates
+and untracked real files existed.
+
+**Decision:** Deleted `.ratx.example` and `apps/web/.ratx.example` from the
+repo (git history still has them, but HEAD no longer serves them). Removed
+the now-pointless `!.ratx.example` carve-out from `apps/web/.gitignore`
+(root `.gitignore` never had one). Added `*.ovpn` to root `.gitignore`.
+
+**Consequence:** New contributors no longer get a checked-in list of which
+env vars to set — that has to come from `docs/DECISIONS.md` (this file,
+ADR-0010) or teammate handoff instead. The `.ratx` naming convention itself
+is still visible in tracked code (`config.py`'s
+`SettingsConfigDict(env_file=".ratx")`, `.gitignore`, this doc) since it's
+inherent to how the loaders work — deleting the templates reduces exposure
+but doesn't make the convention secret, only removes the one file whose
+entire purpose was to spell out the real variable names in one place.
+
+---
+
 ## ADR-0032: Market drivers heatmap — replaces the bubble graph with a correlation-clustered, dominance-sized treemap; timeframe selection recomputes the full graph, including a real cross-timeframe volatility measure
 
 **Context:** Follow-up user request, same session as ADR-0031: "ditch" the

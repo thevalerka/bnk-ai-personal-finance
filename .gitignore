@@ -23,6 +23,9 @@ venv/
 .ratx.local
 *.ratx
 
+# VPN configs (often embed private keys/certs inline)
+*.ovpn
+
 # OS
 .DS_Store
 
